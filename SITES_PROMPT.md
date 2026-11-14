@@ -54,3 +54,11 @@ Sitesランタイムの仕様と接続可能なDB/サーバー機能を確認し
   deployment monitor before launching as a shared real-training service.
 - Use the v0.8 tests and the acceptance checklist to verify one entire round;
   `npm run build` by itself is NOT a production acceptance test.
+
+
+## v0.9 の追加条件
+
+- 最初に `docs/sites-integration-v0.9.md` を読む。
+- ユーザー画面では `round.closes_at` を用いた締切表示と `server_time` 補正を維持する。
+- 画像公開・モデル更新はバックエンドの許可条件をバイパスしない。
+- サイトの公開ボタンを押す前に、正規ユーザー認証・負荷制限・TLS・実画像の権利をレビューする。

@@ -164,9 +164,13 @@ def prepare(data_root:Path,state_root:Path,seed:int=20261115):
     atomic_checkpoint(state_root/'checkpoints'/'initial.pt',
                       {'model':model.state_dict(),'optimizer':optimizer.state_dict(),'seed':seed,'steps':steps})
     atomic_json(state_root/'manifest.json',manifest)
-    atomic_json(state_root/'metrics'/'initial.json',{'checkpoint':'initial','target_pair':target,'public':pub})
-    atomic_json(state_root/'predictions'/'initial.json',{'checkpoint':'initial',
-                     'samples':candidate_predictions(model,data,parts['candidate'])})
+    initial_metrics={'checkpoint':'initial','target_pair':target,'public':pub}
+    initial_predictions={'checkpoint':'initial',
+                         'samples':candidate_predictions(model,data,parts['candidate'])}
+    atomic_json(state_root/'metrics'/'initial.json',initial_metrics)
+    atomic_json(state_root/'predictions'/'initial.json',initial_predictions)
+    atomic_json(state_root/'metrics'/'round-0001.json',initial_metrics)
+    atomic_json(state_root/'predictions'/'round-0001.json',initial_predictions)
     store=GameStore(state_root/'votes.sqlite3');store.initialize()
     store.bootstrap_samples([(i,data.labels[i]) for i in parts['candidate']],version='cifar10-official-v1')
     store.open_round('round-0001','initial',target,seed+1)
@@ -207,10 +211,13 @@ def prepare_demo(state_root:Path,seed:int=20261115):
     atomic_checkpoint(state_root/'checkpoints'/'initial.pt',
                       {'model':model.state_dict(),'optimizer':optimizer.state_dict(),'seed':seed,'steps':steps})
     atomic_json(state_root/'manifest.json',manifest)
-    atomic_json(state_root/'metrics'/'initial.json',
-                {'checkpoint':'initial','target_pair':target,'public':public})
-    atomic_json(state_root/'predictions'/'initial.json',
-                {'checkpoint':'initial','samples':candidate_predictions(model,data,parts['candidate'])})
+    initial_metrics={'checkpoint':'initial','target_pair':target,'public':public}
+    initial_predictions={'checkpoint':'initial',
+                         'samples':candidate_predictions(model,data,parts['candidate'])}
+    atomic_json(state_root/'metrics'/'initial.json',initial_metrics)
+    atomic_json(state_root/'predictions'/'initial.json',initial_predictions)
+    atomic_json(state_root/'metrics'/'round-0001.json',initial_metrics)
+    atomic_json(state_root/'predictions'/'round-0001.json',initial_predictions)
     store=GameStore(state_root/'votes.sqlite3');store.initialize()
     store.bootstrap_samples([(i,data.labels[i]) for i in parts['candidate']],version='synthetic-pixel-art-v1')
     store.open_round('round-0001','initial',target,seed+1)
@@ -267,11 +274,14 @@ def run_locked_round(data_root:Path,state_root:Path, round_id:str):
     consumed=(chosen[promoted] if promoted!='rollback' else [])
     remaining=sorted(set(classes).difference(consumed))
     if len(remaining)<128:raise ValueError('insufficient eligible samples for the next round')
-    atomic_json(state_root/'metrics'/(new_cp+'.json'),{'checkpoint':new_cp,
-                'target_pair':new_weakness,'public':next_metrics})
-    atomic_json(state_root/'predictions'/(new_cp+'.json'),{'checkpoint':new_cp,
-                'samples':candidate_predictions(selected_model,data,remaining)})
     next_round=f"round-{int(round_id[6:])+1:04d}"
+    # Evaluation and candidate pool belong to the ROUND, not solely the
+    # checkpoint: rollback can reuse weights while targeting a different pair.
+    # Never overwrite metrics for a past round or an immutable checkpoint.
+    atomic_json(state_root/'metrics'/(next_round+'.json'),{'checkpoint':new_cp,
+                'target_pair':new_weakness,'public':next_metrics})
+    atomic_json(state_root/'predictions'/(next_round+'.json'),{'checkpoint':new_cp,
+                'samples':candidate_predictions(selected_model,data,remaining)})
     public_result={'status':'PUBLISHED','round_id':round_id,'target_pair':targets,
                    'has_votes':chosen['has_votes'],'voted_count':len(chosen['voted']),
                    'selected_ids':chosen['community'],'control_ids':chosen['random'],

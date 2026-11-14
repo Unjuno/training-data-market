@@ -62,5 +62,5 @@ def test_locked_round_trains_both_arms_and_opens_next(monkeypatch,tmp_path):
     assert result['next_round']=='round-0002'
     assert db.get_round('round-0001')['status']=='PUBLISHED'
     assert db.get_round('round-0002')['status']=='OPEN'
-    assert (state/'predictions'/(result['checkpoint']+'.json')).exists()
+    assert (state/'predictions'/(result['next_round']+'.json')).exists()
     assert len(result['selected_ids'])==128

@@ -16,6 +16,14 @@
 
 ChatGPT Sitesには`@Sites`でサイトを作成できますが、PyTorch学習がSitesのランタイムで実行できるとは前提にしません。`live.html`と`live.js`をUI基盤とし、Sites内の認証・永続DBまたは認証済みの外部APIへ接続します。Python学習ワーカーは別ホストが必要です。具体的な引き継ぎは[SITES_PROMPT.md](SITES_PROMPT.md)と[docs/sites-handoff.md](docs/sites-handoff.md)を参照。
 
+## v0.9: 投票締切・実験履歴の保全
+
+- サーバー時刻基準のラウンド締切をSQLiteへ保存し、ワーカーが遅延しても締切後の推薦・取消・メモ変更を拒否します。
+- 残り時間の表示・15秒ごとの状態自動更新を追加。サーバー時刻で時計ずれを補正します。
+- ロールバック後も古いモデル評価を上書きせず、ラウンド固有の指標を保存します。
+- CIFAR-10画像の公開にはmanifestの明示的な権利承認と設定の両方が必要です。
+- 非公開ステージング用の[Compose実行手順](docs/sites-integration-v0.9.md)とGitHub Actions回帰テストを追加しました。
+
 ## リポジトリの構成
 
 - `live.html` / `live.js` / `live.css`: 実測値のみを表示する日本語のライブ画面。画像公開が未承認ならプレースホルダーを表示。

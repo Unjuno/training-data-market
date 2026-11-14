@@ -1,11 +1,13 @@
 import {CLASS_NAMES,CLASS_KEYS,$,renderPicks,setSystemMessage,createSampleCard,updateQuest,setMetric,renderResults,setupMobileVoteLink} from './src/arena-view.js';
+import {deadlineState} from './src/deadline.js';
 let current=null;let datasetName=null;let picks=new Set();let page=1,total=0;let busy=false;let requestVersion=0;
-let searchDebounce=null;let noteDirty=false;
+let searchDebounce=null;let noteDirty=false;let serverClockOffsetMs=0;let lastEditable=false;let autoRefreshing=false;
 for(let i=0;i<CLASS_NAMES.length;i++){
   const option=document.createElement('option');option.value=String(i);option.textContent=CLASS_NAMES[i];$('label-filter').append(option);
 }
 function status(text,level='info'){$('vote-status').textContent=text;$('vote-status').dataset.level=level;}
 function pageSize(){return window.innerWidth<=620?12:window.innerWidth<=850?24:48;}
+function deadline(){return deadlineState(current,Date.now()+serverClockOffsetMs);} 
 async function request(url,options={}){
   const response=await fetch(url,{credentials:'same-origin',cache:'no-store',...options});
   let data;try{data=await response.json();}catch{throw Error(`サーバーの応答形式に問題があります（HTTP ${response.status}）`);}
@@ -13,18 +15,22 @@ async function request(url,options={}){
   return data;
 }
 function syncControls(){
-  const editable=current?.status==='OPEN';
+  const statusNow=deadline();
+  const editable=statusNow.isOpen;
+  $('round-countdown').textContent=statusNow.label;
   $('sample-id').disabled=!editable;
   $('id-form-live').querySelector('button').disabled=!editable;
   $('save-reason').disabled=!editable;$('reason-live').disabled=!editable;
   $('pool-caption').textContent=editable?'推薦を受付中':current?'推薦の受付は終了しています':'学習データ未準備';
   const phase=$('round-phase');
   const phases={OPEN:'推薦受付中：画像カードから選ぶと即時保存されます。',LOCKED:'投票終了：結果の集計・追加学習を準備中です。',TRAINING:'追加学習中：推薦は変更できません。',PUBLISHED:'結果公開済み：次のクエストを確認してください。'};
-  phase.textContent=current?(phases[current.status]||`現在の状態：${current.status}。推薦は変更できません。`):'モデル未初期化：推薦はまだできません。';
+  phase.textContent=current?(current.status==='OPEN'&&!editable?'締切時刻を過ぎました。集計処理を待っています。':
+    (phases[current.status]||`現在の状態：${current.status}。推薦は変更できません。`)):'モデル未初期化：推薦はまだできません。';
   phase.dataset.phase=editable?'open':'closed';
 }
 function renderModel(info){
   current=info.round;
+  if(Number.isFinite(info.server_time))serverClockOffsetMs=info.server_time*1000-Date.now();
   const mode=info.mode;datasetName=info.dataset_name||null;
   $('mode-badge').className='mode-tag '+(mode==='LIVE'?'is-live':'is-warning');
   $('mode-badge').replaceChildren();
@@ -48,7 +54,7 @@ async function refreshPicks(){
   picks=new Set(value.ids);if(!noteDirty)$('reason-live').value=value.note||'';drawPicks();
 }
 function drawPicks(){
-  renderPicks([...picks].sort((a,b)=>a-b),{disabled:current?.status!=='OPEN',onRemove:id=>vote(id,false)});
+  renderPicks([...picks].sort((a,b)=>a-b),{disabled:!deadline().isOpen,onRemove:id=>vote(id,false)});
 }
 function queryValue(){
   const q=$('query').value.trim();const ix=CLASS_NAMES.indexOf(q);return ix>=0?CLASS_KEYS[ix]:q;
@@ -92,7 +98,7 @@ async function refreshSamples(){
       'ⓘ この画像は独自生成した合成ピクセルアートです。CIFAR-10画像ではありません。':
       data.image_rights_approved?'ⓘ 権利確認済みの画像を表示しています。':
       'ⓘ 画像公開の許可が未確認です。画像の代替ビジュアルを表示しています。';
-    grid.replaceChildren(...data.items.map(item=>createSampleCard({...item,image_kind:data.image_kind,selected:picks.has(item.id),disabled:current.status!=='OPEN'||(!picks.has(item.id)&&picks.size>=10),onToggle:vote})));
+    grid.replaceChildren(...data.items.map(item=>createSampleCard({...item,image_kind:data.image_kind,selected:picks.has(item.id),disabled:!deadline().isOpen||(!picks.has(item.id)&&picks.size>=10),onToggle:vote})));
     if(!data.items.length && total>0 && page>1){page=Math.max(1,Math.ceil(total/limit));return refreshSamples();}
     if(!data.items.length)showEmpty('一致するデータがありません','画像ID・クラス・誤分類条件を変更してみてください。','reset');
     const start=data.items.length?(page-1)*limit+1:0;
@@ -110,7 +116,7 @@ async function refreshSamples(){
   }
 }
 async function vote(id,add=true){
-  if(!current||current.status!=='OPEN'){status('投票受付中のラウンドでのみ変更できます。','error');return false;}
+  if(!deadline().isOpen){status('推薦受付は終了しました。結果の公開をお待ちください。','error');return false;}
   if(!Number.isInteger(id)||id<0){status('有効な画像IDを指定してください。','error');return false;}
   if(add&&picks.size>=10&&!picks.has(id)){status('最大10枚です。先に別の画像を解除してください。','error');return false;}
   if(busy){status('前の推薦を処理中です。','info');return false;}
@@ -181,10 +187,29 @@ $('save-reason').addEventListener('click',async()=>{
   const button=$('save-reason');button.disabled=true;
   try{await request(`/v1/rounds/${encodeURIComponent(current.id)}/note`,{method:'PUT',headers:{'Content-Type':'application/json'},body:JSON.stringify({text:$('reason-live').value})});noteDirty=false;$('note-state').textContent='メモを保存しました。';status('推薦理由のメモをサーバーに保存しました。','success');}
   catch(e){$('note-state').textContent='メモは未保存です。再試行してください。';status('メモを保存できませんでした：'+e.message+'。入力内容は残っています。','error');}
-  finally{button.disabled=current?.status!=='OPEN';}
+  finally{button.disabled=!deadline().isOpen;}
 });
 $('refresh').addEventListener('click',()=>refreshAll().catch(err=>{$('service-fallback').hidden=false;setSystemMessage('更新に失敗：'+err.message,'warning');}));
 let lastLimit=pageSize();
 window.addEventListener('resize',()=>{const next=pageSize();if(next!==lastLimit){lastLimit=next;page=1;refreshSamples();}},{passive:true});
 setupMobileVoteLink();
 refreshAll().catch(error=>{$('service-fallback').hidden=false;setSystemMessage('サーバーAPIに接続できません：'+error.message,'warning');$('pool-caption').textContent='接続待ち';syncControls();$('sample-grid').replaceChildren();showEmpty('サーバーに接続できません','通信状態を確認し、もう一度読み込んでください。','retry');$('page-caption').textContent='接続待ち';});
+
+// Countdown is quiet for assistive technologies; announce only a state transition.
+lastEditable=deadline().isOpen;
+setInterval(()=>{
+  if(!current)return;
+  const editable=deadline().isOpen;
+  $('round-countdown').textContent=deadline().label;
+  if(editable!==lastEditable){
+    lastEditable=editable;syncControls();drawPicks();refreshSamples();
+    if(!editable)status('投票締切になりました。次のラウンドの結果をお待ちください。','info');
+  }
+},1000);
+// Keep the phase and results up-to-date without requiring a manual refresh.
+setInterval(()=>{
+  if(document.visibilityState==='hidden'||busy||autoRefreshing)return;
+  autoRefreshing=true;
+  refreshAll().catch(e=>setSystemMessage('自動更新に失敗しました。「最新の状態に更新」から再試行してください：'+e.message,'warning'))
+    .finally(()=>{autoRefreshing=false;lastEditable=deadline().isOpen;});
+},15000);

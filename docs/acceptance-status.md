@@ -53,3 +53,13 @@
   environment), direct browser-to-localhost navigation (admin policy blocked),
   deployed ChatGPT Sites, external-worker hosting, public authentication,
   actual human usability tests, official-image publication rights.
+
+## v0.9 updates (2026-11-15)
+
+- [PASS locally] Persisted per-round deadline and backward-compatible SQLite migration. Voting and notes are rejected with HTTP 409 at and after deadline, even before the worker locks.
+- [PASS locally] The scheduler uses the DB deadline, not a different CLI timeout; the next round inherits the duration. Browser renders a countdown corrected using `server_time` and checks current round every 15 seconds.
+- [PASS locally] Rollback retains the original checkpoint's metric file. Each next round has its own `metrics/round-XXXX.json` and `predictions/round-XXXX.json`, with legacy fallback.
+- [PASS locally] Natural-image publication requires `image_rights_status=APPROVED` in the private manifest plus `TDM_PUBLISH_IMAGES=true`. Procedural local demo remains separate.
+- [PASS locally] `npm run check` (20 JS tests), `npm run build` (15 public files), `python -m pytest tests_py -q` (30 Python tests), `python -m tests_e2e.ux_flow`, `python -m tests_e2e.ui_api_bridge` (real FastAPI TestClient + Chromium).
+- [PASS local HTTP] Uvicorn started with procedural data; two cookie-separated clients cast votes, the public count reached 2; deadline expiration returned HTTP 409, then the worker performed 40 updates per arm and created a new round (synthetic dataset only).
+- [NOT TESTED] CI on GitHub runners, Docker image building (Docker unavailable in current container), public Sites preview, end-user identity verification, real CIFAR-10 performance and image-publication rights.

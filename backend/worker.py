@@ -21,7 +21,8 @@ def poll_once(store:GameStore,data_root:Path,state_root:Path,
     r=store.current_round()
     if r is None:return 'UNINITIALIZED'
     if r['status']=='OPEN':
-        if now-r['opened_at']<round_seconds:return 'OPEN'
+        deadline=r.get('closes_at') or r['opened_at']+round_seconds
+        if now<deadline:return 'OPEN'
         store.lock_round(r['id'])
         r=store.current_round()
     if r['status']=='LOCKED':

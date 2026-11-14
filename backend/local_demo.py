@@ -38,6 +38,7 @@ def main():
     if not 1<=args.port<=65535:parser.error('port must be 1..65535')
     if not 10<=args.round_seconds<=86400:parser.error('round-seconds must be 10..86400')
     make_demo_env()
+    os.environ['TDM_ROUND_SECONDS']=str(args.round_seconds)
     state=args.state_root
     if not (state/'manifest.json').exists():
         LOG.warning('Preparing synthetic pixel-art demo dataset (NOT CIFAR-10)')
