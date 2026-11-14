@@ -4,6 +4,14 @@
 
 **実装状態：ローカルAPI・投票・PyTorch学習コアを実装し、合成データでテスト済み。CIFAR-10本体は同梱しておらず、実データでの測定・Sites公開は未実施です。** 学習済みだと偽る表示をしていません。
 
+## UX品質の改善（v0.7）
+
+- 画像検索の300ms自動更新、各画面幅に応じた小さなページサイズ、一覧末尾からのページ移動。
+- 推薦のサーバー保存を即時フィードバック。失敗時は画像IDと理由メモを維持し、エラーと検索結果0件を区別する。
+- メモの保存状態と推薦の確定を分ける。キーボード操作の焦点を保持する。
+- [UX品質仕様と未実施の人間テスト](docs/ux-quality-v0.7.md)。
+- オプションのChromium実ブラウザ操作テスト: `python tests_e2e/ux_flow.py`（PlaywrightとChromiumが必要）。
+
 ## 重要：Sitesと学習ワーカーは別
 
 ChatGPT Sitesには`@Sites`でサイトを作成できますが、PyTorch学習がSitesのランタイムで実行できるとは前提にしません。`live.html`と`live.js`をUI基盤とし、Sites内の認証・永続DBまたは認証済みの外部APIへ接続します。Python学習ワーカーは別ホストが必要です。具体的な引き継ぎは[SITES_PROMPT.md](SITES_PROMPT.md)と[docs/sites-handoff.md](docs/sites-handoff.md)を参照。
@@ -55,3 +63,45 @@ python -m pytest tests_py -q
 - [実装状況・残件](docs/acceptance-status.md)
 - [Sites引き継ぎ](docs/sites-handoff.md)
 - [旧静的UIデモ](index.html)
+
+## One-command functional demo (v0.8, **real training on original synthetic pixel art**)
+
+To test the whole game **without downloading CIFAR-10**, start the localhost-only
+procedural training lab. The 1,600 generated 32×32 images are newly drawn by this
+project; **these are NOT CIFAR-10 photos and their metrics say nothing about
+CIFAR-10 accuracy**.
+
+```bash
+python -m pip install -r requirements-ml.txt
+python -m backend.local_demo --port 8000 --round-seconds 90
+```
+
+Visit `http://127.0.0.1:8000/`. The browser can explore actual generated images,
+search, vote on up to 10 samples per session, see other sessions' votes, and review
+real PyTorch experiments when the round closes. The local worker runs both
+Community and Random arms for 40 optimizer steps, evaluates them, applies the
+safety gate and creates the next round. It is **not** a publicly authenticated
+service. For another run use another `--state-root`; the default `demo-state/`
+contains checkpoints and SQLite data and is gitignored. Stop using Ctrl+C.
+
+**Sites:** Static-host build `dist/index.html` now serves the API-driven live page,
+not the fabricated demonstration. Without a configured server the page will
+show an explicit connection error and a link to `dist/demo.html` (local, simulated
+UI-only). For a public Sites launch, connect genuine authentication, server-side
+persistence and an external ML worker. This local command must not bind to
+`0.0.0.0` or serve as the public production backend.
+
+### Verification
+
+```bash
+npm run check && npm run build
+python -m pytest tests_py -q
+python tests_e2e/ux_flow.py                # Chromium UI + simulated API errors
+PYTHONPATH=. python tests_e2e/ui_api_bridge.py  # Chromium UI ↔ real FastAPI, synthetic training
+```
+
+Local Chromium navigation to `127.0.0.1` may be blocked by the execution
+platform. `ui_api_bridge.py` runs the *real* FastAPI app through separate
+TestClient cookie jars bridged to Chromium UI requests. Image responses are
+verified independently by `test_demo_mode.py`. This is a functional integration
+check, **not** validation of browser networking in a deployed public site.

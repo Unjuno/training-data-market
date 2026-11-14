@@ -12,5 +12,6 @@ test('static build includes complete demo and excludes private/server files',()=
   }
   const all=readdirSync(new URL('../dist/',import.meta.url),{recursive:true});
   assert.equal(all.some(path=>/(^|\/)(\.env|\.git|node_modules|data|checkpoints|tests)(\/|\.|$)/.test(path)),false);
-  assert.match(readFileSync(new URL('../dist/index.html',import.meta.url),'utf8'),/DEMO/);
+  assert.match(readFileSync(new URL('../dist/index.html',import.meta.url),'utf8'),/src="live.js"/);
+  assert.match(readFileSync(new URL('../dist/demo.html',import.meta.url),'utf8'),/src="app.js"/);
 });

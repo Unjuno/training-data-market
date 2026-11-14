@@ -1,8 +1,8 @@
 {
   "name": "training-data-market",
   "private": true,
-  "version": "0.6.0",
-  "description": "Training Data Market — polished research-cockpit UI, reproducible PyTorch worker, and ChatGPT Sites handoff",
+  "version": "0.8.0",
+  "description": "Training Data Market — UX-refined research-cockpit UI, reproducible PyTorch worker, and ChatGPT Sites handoff",
   "type": "module",
   "scripts": {
     "dev": "npm run build && node scripts/serve.mjs",

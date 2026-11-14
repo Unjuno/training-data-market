@@ -28,3 +28,29 @@ Sitesランタイムの仕様と接続可能なDB/サーバー機能を確認し
 
 まず非公開プレビューを生成し、画面の各入力・投票保存・認証/アクセス分離・結果取得を検証してください。検証後、完了した機能、未実装の機能、必要な外部設定を一覧で報告してください。機能が実装されていないときは「完成」「公開済み」「学習が改善した」と主張しないでください。
 ```
+
+
+## UX品質の追加必須条件（v0.7）
+
+- `docs/ux-quality-v0.7.md` を読み、見た目だけでなく操作の理解・保存確認・エラー復旧・キーボード操作を検証する。
+- 画像選択の瞬間に学習が始まると誤認させない。推薦保存とメモ保存は別の操作として表示する。
+- 0件、通信失敗、未初期化、締切後をそれぞれ区別し、再試行や解除などの実際に動作する出口を備える。
+- 実画像・認証・投票・モデル更新が未接続の間、できていない動作をデザインやプレースホルダーで成功したように見せない。
+- 初見ユーザー10名以上を含むユーザビリティ試験は未実施である。仮説として扱い、公開後の改善判断の入力とする。
+
+## v0.8: Functional demo and release guardrails
+
+- There are now **three distinct modes**: `live.html` on authenticated API;
+  `demo.html` with simulated UI data and no training; local-only
+  `backend.local_demo` with original synthetic images and actual PyTorch updates.
+- **`dist/index.html` is the live API entry.** Do not silently replace it with
+  the simulated demo or claim that a static Site alone performs training.
+- The local demo must NEVER be exposed directly to the internet. The anonymous
+  signed cookie is not proof of personhood; implement Sites authentication,
+  per-user vote enforcement, DB transaction safety and rate-limits.
+- Preserve dataset provenance (`CIFAR-10` vs `SYNTHETIC_PIXEL_ART`) in UI,
+  endpoints, charts and research output. Never attribute demo accuracy to CIFAR.
+- Configure an authenticated server-to-worker channel, stateful database and
+  deployment monitor before launching as a shared real-training service.
+- Use the v0.8 tests and the acceptance checklist to verify one entire round;
+  `npm run build` by itself is NOT a production acceptance test.

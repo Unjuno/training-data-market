@@ -35,3 +35,21 @@
 - デモの選択・解除・猫クラス検索のUI挙動を確認。隔離ブラウザではstorageにアクセスできず、保存操作は明示的に失敗を表示。
 - Python/Node単体およびAPIテストは現行のツール環境で実行（成果物公開前に再実行）。
 - **未検証**：Sites上のブラウザE2E、実CIFAR-10学習と画像公開権利の承認。
+
+## v0.8 tested fixes (2026-11-15)
+
+- Added original synthetic 32×32 pixel-art dataset and an explicitly marked
+  `SYNTHETIC_PIXEL_ART` **DEMO** result source. It can run without CIFAR download.
+- Added localhost-only one-command `backend.local_demo`, with actual gradients,
+  real shared SQLite picks, scheduled lock, two arms, safety gate, and next round.
+- Corrected static build entry: `/index.html` = live API screen;
+  `/demo.html` = simulated UI only. Connection errors show a visible fallback.
+- The image API serves only internally generated demo artwork when explicitly in
+  demo mode, or CIFAR images when publication is separately authorized.
+- Full API integration test checks two session IDs, SQLite persistence, note,
+  40 real gradient steps per arm, round lock, result and new round.
+- Chromium + real FastAPI bridge test checks the UI against real API responses.
+- **Not verified:** official CIFAR-10 accuracy (dataset unavailable in this
+  environment), direct browser-to-localhost navigation (admin policy blocked),
+  deployed ChatGPT Sites, external-worker hosting, public authentication,
+  actual human usability tests, official-image publication rights.
