@@ -29,3 +29,16 @@ dist/
 .worktrees/
 *.log
 playwright-report/
+
+# Training worker private state, credentials, model checkpoints, and dataset
+/state/
+/data/
+*.pt
+*.pth
+*.sqlite3
+*.sqlite3-*
+.env
+.env.*
+!.env.example
+__pycache__/
+.pytest_cache/

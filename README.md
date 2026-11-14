@@ -1,50 +1,57 @@
-# Training Data Market
+# Training Data Market — CIFAR-10 Collaborative Training Game
 
-**人間が学習画像を選び、共有AIの弱点を克服するゲーム。**
+ユーザーが共有AIの弱点を観察し、有効だと考える学習画像を推薦するゲーム。投票締切後、同一モデルから **Community/Randomの二分岐**で追加学習し、公開指標・採否・次のクエストを表示します。
 
-現在の公開内容は **動作する静的デモと、ChatGPT Sitesで本実装するための引き継ぎ一式** です。実画像・サーバー投票・CIFAR-10の追加学習・Sitesへのデプロイはまだ接続していません。画面の数値はすべて架空です。
+**実装状態：ローカルAPI・投票・PyTorch学習コアを実装し、合成データでテスト済み。CIFAR-10本体は同梱しておらず、実データでの測定・Sites公開は未実施です。** 学習済みだと偽る表示をしていません。
 
-## ChatGPT Sitesで使う
+## 重要：Sitesと学習ワーカーは別
 
-[コピーして使う作成指示文](SITES_PROMPT.md) を、Sitesを利用できるChatGPT Workに貼り付けてください。リポジトリを参照できない場合は、リポジトリのZIPを同じ会話に添付します。GitHubへのpushだけでSitesに自動公開される仕組みは設定していません。
+ChatGPT Sitesには`@Sites`でサイトを作成できますが、PyTorch学習がSitesのランタイムで実行できるとは前提にしません。`live.html`と`live.js`をUI基盤とし、Sites内の認証・永続DBまたは認証済みの外部APIへ接続します。Python学習ワーカーは別ホストが必要です。具体的な引き継ぎは[SITES_PROMPT.md](SITES_PROMPT.md)と[docs/sites-handoff.md](docs/sites-handoff.md)を参照。
 
-- [Sites引き継ぎ・実装順序](docs/sites-handoff.md)
-- [採用済み統合仕様 v0.4](docs/spec-v0.4.md)
-- [現在の実装・検証状況](docs/acceptance-status.md)
+## リポジトリの構成
 
-## このコードで動くもの
+- `live.html` / `live.js` / `live.css`: 実測値のみを表示する日本語のライブ画面。画像公開が未承認ならプレースホルダーを表示。
+- `backend/service.py`: FastAPI。共有投票の保存、検索ページング、状態・結果・履歴、管理者による締切。
+- `backend/store.py`: SQLiteトランザクション。最大10票、重複排除、締切後の変更禁止、推薦理由の保存、結果の原子的公開。
+- `backend/core.py`: クラス層化分割、投票上位最大64件、128枚の二分岐、弱点判定、安全ゲート。
+- `backend/ml.py`: CIFAR-10ロード、軽量CNN、初期学習、各アーム40 optimizer steps、検証、Checkpoint昇格・ロールバック。
+- `backend/worker.py`: 運営者が起動するラウンド実行スケジューラ。
+- `index.html` / `app.js`: 既存の**架空データによる静的操作デモ**。`/demo.html`から確認。
+- `docs/spec-v0.4.md`: 採用済み製品仕様と研究プロトコル。
+- `tests_py/` / `tests/`: サーバー・モデル・ブラウザロジックの回帰テスト。
 
-検索、クラス絞り込み、誤分類の絞り込み、Loss順ソート、画像ID入力、最大10件の推薦、400文字までの理由入力、ブラウザへの保存と復元。画像の代わりに30件の絵文字データを表示します。保存した推薦は他の人やAIには送信されません。
+## ローカル実行手順（Python 3.11+、CPU）
 
-## 起動・検証
+1. 依存関係をインストール: `python -m pip install -r requirements-ml.txt -r requirements-test.txt`。
+2. 使用許諾条件を自身で確認してからCIFAR-10公式データをローカルの`data/`に取得する。例： `python -c "from torchvision.datasets import CIFAR10; CIFAR10('data',train=True,download=True); CIFAR10('data',train=False,download=True)"`。データ本体をGitHubにコミットしない。
+3. `python -m backend.ml prepare --data-root data --state-root state` で初期モデルを作成。50,000枚の公式訓練データを **2,000初期学習 / 3,000公開検証 / 2,000安全検証 / 43,000候補** に固定分割し、公式テスト10,000枚を隔離する。
+4. 32文字以上のランダム値で環境変数`TDM_COOKIE_SECRET`、`TDM_ADMIN_KEY`を設定する（`.env.example`参照）。初期状態の `TDM_PUBLISH_IMAGES=false` は権利確認まで維持。
+5. `uvicorn backend.service:app --host 127.0.0.1 --port 8000` を起動し、`http://127.0.0.1:8000`を開く。匿名ブラウザ識別を利用した**技術パイロット**であり、本人確認済みアカウントではない。
+6. 24時間ごとの集計・追加学習には `python -m backend.worker --data-root data --state-root state` を別プロセスで実行（運営環境側で継続起動が必要）。即時検証は管理者が `POST /v1/admin/rounds/round-0001/lock` に `X-Admin-Key` を添えて締切後、 `python -m backend.ml train-round --data-root data --state-root state --round-id round-0001` を実行する。
+7. 結果と次の弱点クエストはDBへ保存され、次のラウンドが自動生成される。学習実験中のアームは同じ重み・同じSGD momentum・同じseedで分岐する。
 
-Node.js 22以上を使用します。外部パッケージのインストールは不要です。
+**注意**: `prepare`はCIFAR-10本体とCPU時間が必要です。ここではインターネットへのアクセスが制限されるため実データをダウンロード・学習できず、精度・実行速度は未測定です。
+
+## テスト
 
 ```bash
+node --check live.js
 npm run check
 npm run build
-npm run preview
+python -m pytest tests_py -q
 ```
 
-`http://127.0.0.1:8000` を開きます。`npm run dev` ならビルド後に起動します。静的配信するディレクトリは `dist/` です。`scripts/serve.mjs` はローカル確認用で、本番APIや認証サーバーではありません。
+## 安全性と公開時の制限
 
-## 構成
+このローカルAPIは、署名付きの匿名ブラウザセッションで推薦を保存します。**公共サービスの本人確認や不正票防止は未実装**です。一般公開前にSitesで正規アカウント認証・不正対策・負荷制御を追加してください。
 
-```text
-index.html / styles.css / app.js   既存の日本語UI
-src/                              デモデータ、選択、ローカル保存
-scripts/                          静的ビルドとローカル配信
-tests/                            Node.js標準の回帰テスト
-docs/spec-v0.4.md                  製品・実験仕様
-SITES_PROMPT.md                    Sitesへの作成指示
-```
+`TDM_PUBLISH_IMAGES`は権利確認済みのときだけ有効にすること。未承認の画像をPublicサイトに配布しない。管理者キー、Cookie秘密鍵、モデル重み、非公開検証セットをGitHub・クライアントJSへ入れない。最終テスト画像は学習・ユーザー探索に使わない。
 
-## 本ゲームの完成条件
+実金・換金ベット、学習率の投票介入、EMA/Bollinger制御はMVPの対象外です。コードとデータセットの権利は別です。
 
-実データの探索 → 認証済み推薦 → 締切 → 同一チェックポイントからの2アーム学習 → 検証 → 採用またはロールバック → 次ラウンド、という一巡と仕様書AC-01〜18の確認が必要です。静的デモの動作確認だけを、ゲーム全体の完成と扱いません。
+## リンク
 
-学習率は初期版では固定。予測ベット・EMA・ボリンジャーバンド制御は後続機能です。重い学習処理をブラウザ内の架空アニメーションで代用しないでください。
-
-## 公開と安全
-
-秘密情報・学習データ本体・モデル重み・個人の投票ログはこのリポジトリに含めません。CIFAR-10実画像の公開可否は未確認なので、公開デモには含めていません。MITライセンスは独自コードに適用され、外部画像の権利を付与するものではありません。詳細は [SECURITY.md](SECURITY.md) を参照してください。
+- [正式仕様 v0.4](docs/spec-v0.4.md)
+- [実装状況・残件](docs/acceptance-status.md)
+- [Sites引き継ぎ](docs/sites-handoff.md)
+- [旧静的UIデモ](index.html)

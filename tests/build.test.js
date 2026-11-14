@@ -7,7 +7,7 @@ const root=fileURLToPath(new URL('../',import.meta.url));
 test('static build includes complete demo and excludes private/server files',()=>{
   assert.ok(existsSync(new URL('../scripts/build.mjs',import.meta.url)),'build script exists');
   execFileSync(process.execPath,['scripts/build.mjs'],{cwd:root});
-  for(const path of ['index.html','styles.css','app.js','src/selection.js','src/draft.js','src/demo-data.js','docs/spec-v0.4.md']) {
+  for(const path of ['index.html','live.html','live.js','live.css','styles.css','app.js','src/selection.js','src/draft.js','src/demo-data.js','docs/spec-v0.4.md']) {
     assert.ok(existsSync(new URL('../dist/'+path,import.meta.url)),path);
   }
   const all=readdirSync(new URL('../dist/',import.meta.url),{recursive:true});

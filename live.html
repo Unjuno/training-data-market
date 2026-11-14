@@ -1,0 +1,62 @@
+<!doctype html>
+<html lang="ja">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width,initial-scale=1">
+  <meta name="description" content="共有AIの弱点を改善する学習データ選択ゲーム">
+  <title>Training Data Market — Live Arena</title>
+  <link rel="stylesheet" href="styles.css"><link rel="stylesheet" href="live.css">
+  <script type="module" src="live.js"></script>
+</head>
+<body>
+<a href="#main" class="skip-link">本文へ</a>
+<div class="app-shell">
+  <header class="topbar"><div class="brand"><span class="brand-mark" aria-hidden="true">◈</span><span>Training Data Market</span></div><span id="mode-badge" class="pill amber">接続確認中</span></header>
+  <main id="main">
+    <section class="hero" aria-labelledby="headline">
+      <div><p class="eyebrow">COMMUNITY TRAINING / LIVE ARENA</p>
+        <h1 id="headline">選んだデータで、<br>AIを育てる。</h1>
+        <p class="intro">AIの弱点を観察し、学習に有効だと考える画像を推薦。投票はサーバーに保存し、締切後にモデル更新と対照実験で検証します。</p></div>
+      <div class="hero-side"><span class="radar" aria-hidden="true">◎</span><span>現在のクエスト<br><strong id="target-pair">読み込み中</strong></span></div>
+    </section>
+    <p id="app-alert" class="live-alert" role="status" aria-live="polite">学習状態を取得しています。</p>
+    <section class="stats" aria-label="モデルの公開検証指標">
+      <div class="stat"><span>検証 Loss</span><strong id="metric-loss">—</strong></div>
+      <div class="stat"><span>全体 Accuracy</span><strong id="metric-accuracy">—</strong></div>
+      <div class="stat"><span>ラウンド</span><strong id="metric-round">—</strong></div>
+      <div class="stat"><span>推薦上限</span><strong>10 <small>枚/人</small></strong></div>
+    </section>
+    <div class="workspace">
+      <section class="browser-panel" aria-labelledby="browse-title">
+        <div class="section-heading"><div><p class="eyebrow">EXPLORE & PREDICT</p><h2 id="browse-title">画像を探索</h2></div><p class="helper" id="pool-caption">候補画像をページ単位で表示</p></div>
+        <form id="filters" class="filters" role="search">
+          <label class="field grow" for="query"><span>画像ID / クラス名</span><input id="query" type="search" placeholder="例：103、cat" autocomplete="off"></label>
+          <label class="field" for="label-filter"><span>正解クラス</span><select id="label-filter"><option value="">すべて</option></select></label>
+          <label class="checkfield"><input id="wrong-only-live" type="checkbox"> <span>誤分類のみ</span></label>
+          <button class="button secondary" type="submit">検索</button>
+        </form>
+        <p class="small muted" id="dataset-rights">画像公開が許可されていない場合、画像を表示できません。</p>
+        <div class="list-tools"><p id="page-caption">候補を読み込み中…</p><div class="live-paging"><button type="button" id="prev-page" class="button secondary">前へ</button><button type="button" id="next-page" class="button secondary">次へ</button></div></div>
+        <div id="sample-grid" class="sample-grid" aria-live="polite"></div><p class="empty" id="empty-state" hidden>一致するデータがありません。</p>
+      </section>
+      <aside class="vote-panel" aria-labelledby="picks-title">
+        <div class="vote-header"><p class="eyebrow">MY VOTES</p><h2 id="picks-title">推薦リスト <span id="my-count">0 / 10</span></h2></div>
+        <p class="small muted">この版ではブラウザごとに署名付きの匿名セッションを発行します。これは本人確認済みアカウントではありません。</p>
+        <form id="id-form-live" class="id-form"><label class="field grow" for="sample-id"><span>画像IDを直接入力</span><input id="sample-id" type="number" step="1" min="0" placeholder="例：1234" required></label><button class="button secondary" type="submit">推薦</button></form>
+        <ul id="my-picks" class="pick-list" aria-live="polite"><li class="muted">読み込み中</li></ul>
+        <label class="field" for="reason-live"><span>推薦理由（任意・400文字以内）</span><textarea id="reason-live" rows="4" maxlength="400" placeholder="この画像が有効だと思う理由"></textarea></label>
+        <button type="button" id="save-reason" class="button secondary wide">理由をサーバーに保存</button>
+        <p id="vote-status" class="status" role="status" aria-live="polite"></p>
+        <button type="button" id="refresh" class="button primary wide">学習状態を更新</button>
+        <div class="rule-note"><strong>学習方法</strong><p>最大64枚が投票から選択され、ランダム補完と合わせて128枚を構成。同一チェックポイントからランダム対照モデルも学習し、損失の改善を比較します。</p></div>
+      </aside>
+    </div>
+    <section class="live-results" aria-labelledby="results-title">
+      <div class="section-heading"><div><p class="eyebrow">AUDITABLE RESULTS</p><h2 id="results-title">直近の学習結果</h2></div></div>
+      <div id="results" class="result-body" aria-live="polite">まだ結果がありません。ラウンドの終了後に、実際の計測値を表示します。</div>
+    </section>
+  </main>
+  <footer>実際のCIFAR-10データが必要です。公開前に画像の再配布条件と認証を確認してください。<a href="/demo.html">静的UIデモ</a> · <a href="https://github.com/Unjuno/training-data-market">GitHub</a></footer>
+</div>
+</body>
+</html>
