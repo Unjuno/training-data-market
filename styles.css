@@ -122,3 +122,8 @@ button:disabled{cursor:not-allowed;opacity:.48}input,select,textarea{color:var(-
 .bottom-pagination span{color:#bdd2c2;font-family:var(--font-code);font-size:.75rem;}
 .bottom-pagination .page-btn{min-height:44px;flex:0 1 150px;}
 @media(max-width:620px){.bottom-pagination{flex-wrap:wrap;}.bottom-pagination .page-btn{flex:1 1 115px;}.bottom-pagination span{order:-1;flex-basis:100%;text-align:center;font-size:.8rem;}}
+
+/* Explicit recovery path when a static Sites preview has no API yet. */
+.service-fallback:not([hidden]){display:flex;gap:12px;align-items:center;flex-wrap:wrap;margin:12px 0 28px;padding:16px 22px;background:#253128;border:1px solid #71815f;border-radius:12px;color:#f9edce;font-size:14px;line-height:1.65;}
+.service-fallback a{color:#d7ff90;font-weight:700;text-decoration:underline;text-underline-offset:3px;}
+.service-fallback a:focus-visible{outline:3px solid #e6ffc1;outline-offset:4px;border-radius:2px;}

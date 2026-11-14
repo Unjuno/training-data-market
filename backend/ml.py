@@ -25,6 +25,7 @@ from torch.utils.data import DataLoader,Dataset,Subset
 
 from backend.core import assemble_arms, select_promotion, split_ids, weakness_pair
 from backend.store import GameStore,GameError
+from backend.demo_data import SyntheticPixelArt
 
 class TinyCNN(nn.Module):
     """CIFAR RGB (N,3,32,32) -> ten logits, no pretrained weights."""
@@ -173,6 +174,49 @@ def prepare(data_root:Path,state_root:Path,seed:int=20261115):
             'public_loss':pub['overall_loss'],'safety_loss':safety['overall_loss']}
 
 
+
+def prepare_demo(state_root:Path,seed:int=20261115):
+    """Initialize original 32x32 pixel-art dataset; not a CIFAR-10 result.
+
+    Demo split per class: initial20 / public10 / safety10 / candidate100 / test20.
+    """
+    if (state_root/'manifest.json').exists():
+        raise FileExistsError('project is already initialized')
+    seed_all(seed)
+    data=SyntheticPixelArt(seed)
+    rng=random.Random(seed)
+    parts={key:[] for key in ('initial','public','safety','candidate','test')}
+    quotas={'initial':20,'public':10,'safety':10,'candidate':100,'test':20}
+    for cls in range(10):
+        ids=[i for i,y in enumerate(data.labels) if y==cls]
+        rng.shuffle(ids)
+        offset=0
+        for key,n in quotas.items():
+            parts[key].extend(ids[offset:offset+n]);offset+=n
+    for ids in parts.values():ids.sort()
+    model=TinyCNN()
+    optimizer=torch.optim.SGD(model.parameters(),lr=.01,momentum=.9,weight_decay=0)
+    _,steps=train_steps(model,optimizer,data,parts['initial'],epochs=3,batch_size=32,seed=seed)
+    target=weakness_pair(evaluate(model,data,parts['public'],(3,5))['confusion'])
+    public=evaluate(model,data,parts['public'],target)
+    manifest={'schema_version':1,'seed':seed,'dataset':'SYNTHETIC_PIXEL_ART',
+              'splits':parts,'config':{'net':'TinyCNN','lr':.01,'momentum':.9,
+              'batch':32,'initial_epochs':3,'round_epochs':10},
+              'notice':'Original generated pixel art; NOT CIFAR-10'}
+    state_root.mkdir(parents=True,exist_ok=True)
+    atomic_checkpoint(state_root/'checkpoints'/'initial.pt',
+                      {'model':model.state_dict(),'optimizer':optimizer.state_dict(),'seed':seed,'steps':steps})
+    atomic_json(state_root/'manifest.json',manifest)
+    atomic_json(state_root/'metrics'/'initial.json',
+                {'checkpoint':'initial','target_pair':target,'public':public})
+    atomic_json(state_root/'predictions'/'initial.json',
+                {'checkpoint':'initial','samples':candidate_predictions(model,data,parts['candidate'])})
+    store=GameStore(state_root/'votes.sqlite3');store.initialize()
+    store.bootstrap_samples([(i,data.labels[i]) for i in parts['candidate']],version='synthetic-pixel-art-v1')
+    store.open_round('round-0001','initial',target,seed+1)
+    return {'dataset':'SYNTHETIC_PIXEL_ART','target_pair':target,
+            'initial_optimizer_steps':steps,'public_loss':public['overall_loss']}
+
 def run_locked_round(data_root:Path,state_root:Path, round_id:str):
     store=GameStore(state_root/'votes.sqlite3')
     round_data=store.get_round(round_id)
@@ -181,7 +225,8 @@ def run_locked_round(data_root:Path,state_root:Path, round_id:str):
         raise GameError('invalid round identifier',422)
     seed=int(round_data['seed']);seed_all(seed)
     manifest=json.loads((state_root/'manifest.json').read_text())
-    data=CombinedCIFAR(data_root)
+    data=(SyntheticPixelArt(manifest.get('seed',20261115))
+          if manifest.get('dataset')=='SYNTHETIC_PIXEL_ART' else CombinedCIFAR(data_root))
     classes=store.get_classes()
     counts=store.get_counts(round_id)
     chosen=assemble_arms(classes,counts,seed)
@@ -248,13 +293,14 @@ def run_locked_round(data_root:Path,state_root:Path, round_id:str):
 
 def main():
     parser=argparse.ArgumentParser()
-    parser.add_argument('command',choices=['prepare','train-round'])
+    parser.add_argument('command',choices=['prepare','demo-prepare','train-round'])
     parser.add_argument('--data-root',type=Path,default=Path('data'))
     parser.add_argument('--state-root',type=Path,default=Path('state'))
     parser.add_argument('--round-id',default='round-0001')
     parser.add_argument('--seed',type=int,default=20261115)
     args=parser.parse_args()
     result=(prepare(args.data_root,args.state_root,args.seed) if args.command=='prepare'
+            else prepare_demo(args.state_root,args.seed) if args.command=='demo-prepare'
             else run_locked_round(args.data_root,args.state_root,args.round_id))
     print(json.dumps(result,ensure_ascii=False,indent=2))
 

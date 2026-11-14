@@ -37,3 +37,20 @@ Sitesランタイムの仕様と接続可能なDB/サーバー機能を確認し
 - 0件、通信失敗、未初期化、締切後をそれぞれ区別し、再試行や解除などの実際に動作する出口を備える。
 - 実画像・認証・投票・モデル更新が未接続の間、できていない動作をデザインやプレースホルダーで成功したように見せない。
 - 初見ユーザー10名以上を含むユーザビリティ試験は未実施である。仮説として扱い、公開後の改善判断の入力とする。
+
+## v0.8: Functional demo and release guardrails
+
+- There are now **three distinct modes**: `live.html` on authenticated API;
+  `demo.html` with simulated UI data and no training; local-only
+  `backend.local_demo` with original synthetic images and actual PyTorch updates.
+- **`dist/index.html` is the live API entry.** Do not silently replace it with
+  the simulated demo or claim that a static Site alone performs training.
+- The local demo must NEVER be exposed directly to the internet. The anonymous
+  signed cookie is not proof of personhood; implement Sites authentication,
+  per-user vote enforcement, DB transaction safety and rate-limits.
+- Preserve dataset provenance (`CIFAR-10` vs `SYNTHETIC_PIXEL_ART`) in UI,
+  endpoints, charts and research output. Never attribute demo accuracy to CIFAR.
+- Configure an authenticated server-to-worker channel, stateful database and
+  deployment monitor before launching as a shared real-training service.
+- Use the v0.8 tests and the acceptance checklist to verify one entire round;
+  `npm run build` by itself is NOT a production acceptance test.

@@ -1,5 +1,5 @@
 import {CLASS_NAMES,CLASS_KEYS,$,renderPicks,setSystemMessage,createSampleCard,updateQuest,setMetric,renderResults,setupMobileVoteLink} from './src/arena-view.js';
-let current=null;let picks=new Set();let page=1,total=0;let busy=false;let requestVersion=0;
+let current=null;let datasetName=null;let picks=new Set();let page=1,total=0;let busy=false;let requestVersion=0;
 let searchDebounce=null;let noteDirty=false;
 for(let i=0;i<CLASS_NAMES.length;i++){
   const option=document.createElement('option');option.value=String(i);option.textContent=CLASS_NAMES[i];$('label-filter').append(option);
@@ -25,10 +25,10 @@ function syncControls(){
 }
 function renderModel(info){
   current=info.round;
-  const mode=info.mode;
+  const mode=info.mode;datasetName=info.dataset_name||null;
   $('mode-badge').className='mode-tag '+(mode==='LIVE'?'is-live':'is-warning');
   $('mode-badge').replaceChildren();
-  const led=document.createElement('span');led.className='status-led';led.setAttribute('aria-hidden','true');$('mode-badge').append(led,document.createTextNode(mode==='LIVE'?' LIVE · 実測値':' 未初期化 / 未接続'));
+  const led=document.createElement('span');led.className='status-led';led.setAttribute('aria-hidden','true');$('mode-badge').append(led,document.createTextNode(mode==='LIVE'?' LIVE · 実測値':mode==='DEMO'?' DEMO · 合成画像の実測':' 未初期化 / 未接続'));
   updateQuest(current?.targets,current?.id||'ROUND —');
   $('metric-round').textContent=current?.id||'—';
   const metrics=info.metrics?.public;
@@ -38,6 +38,7 @@ function renderModel(info){
   if(!current)setSystemMessage('初期モデルと学習データがまだ登録されていません。サーバー管理者による初期化が必要です。','warning');
   else if(!metrics)setSystemMessage('検証結果が未計測です。推測値を代わりに表示することはありません。','warning');
   else if(current.status!=='OPEN')setSystemMessage(`現在は ${current.status} フェーズです。学習が終わるまで推薦を変更できません。`,'warning');
+  else if(mode==='DEMO')setSystemMessage('合成ピクセルアートを使う技術デモです。実際にAIが学習しますが、CIFAR-10の性能結果ではありません。','warning');
   else setSystemMessage('モデルの実測データを表示しています。選んだ画像は投票締切後の学習に反映されます。');
 }
 async function refreshPicks(){
@@ -87,10 +88,11 @@ async function refreshSamples(){
   try{
     const data=await request('/v1/samples?'+params.toString());if(key!==requestVersion)return;
     total=data.total;
-    $('dataset-rights').textContent=data.image_rights_approved?
-      'ⓘ 権利確認済みの画像を表示しています。':
+    $('dataset-rights').textContent=data.image_kind==='SYNTHETIC_PIXEL_ART'?
+      'ⓘ この画像は独自生成した合成ピクセルアートです。CIFAR-10画像ではありません。':
+      data.image_rights_approved?'ⓘ 権利確認済みの画像を表示しています。':
       'ⓘ 画像公開の許可が未確認です。画像の代替ビジュアルを表示しています。';
-    grid.replaceChildren(...data.items.map(item=>createSampleCard({...item,selected:picks.has(item.id),disabled:current.status!=='OPEN'||(!picks.has(item.id)&&picks.size>=10),onToggle:vote})));
+    grid.replaceChildren(...data.items.map(item=>createSampleCard({...item,image_kind:data.image_kind,selected:picks.has(item.id),disabled:current.status!=='OPEN'||(!picks.has(item.id)&&picks.size>=10),onToggle:vote})));
     if(!data.items.length && total>0 && page>1){page=Math.max(1,Math.ceil(total/limit));return refreshSamples();}
     if(!data.items.length)showEmpty('一致するデータがありません','画像ID・クラス・誤分類条件を変更してみてください。','reset');
     const start=data.items.length?(page-1)*limit+1:0;
@@ -148,6 +150,7 @@ async function refreshResults(){
 async function refreshAll(){
   const info=await request('/v1/rounds/current');
   const prior=current?.id;renderModel(info);
+  $('service-fallback').hidden=true;
   if(prior!==current?.id)page=1;
   // Refresh remote picks even when the round didn't change (other tabs or devices).
   await refreshPicks();
@@ -165,7 +168,7 @@ $('next-page-bottom').addEventListener('click',()=>{if(page*pageSize()<total){pa
 $('empty-action').addEventListener('click',()=>{
   if($('empty-action').dataset.action!=='retry'){resetFilters();return;}
   if(current)refreshSamples();
-  else refreshAll().catch(err=>setSystemMessage('サーバーに接続できません：'+err.message,'warning'));
+  else refreshAll().catch(err=>{$('service-fallback').hidden=false;setSystemMessage('サーバーに接続できません：'+err.message,'warning');});
 });
 $('id-form-live').addEventListener('submit',async e=>{
   e.preventDefault();const input=$('sample-id');const raw=input.value.trim();
@@ -180,8 +183,8 @@ $('save-reason').addEventListener('click',async()=>{
   catch(e){$('note-state').textContent='メモは未保存です。再試行してください。';status('メモを保存できませんでした：'+e.message+'。入力内容は残っています。','error');}
   finally{button.disabled=current?.status!=='OPEN';}
 });
-$('refresh').addEventListener('click',()=>refreshAll().catch(err=>setSystemMessage('更新に失敗：'+err.message,'warning')));
+$('refresh').addEventListener('click',()=>refreshAll().catch(err=>{$('service-fallback').hidden=false;setSystemMessage('更新に失敗：'+err.message,'warning');}));
 let lastLimit=pageSize();
 window.addEventListener('resize',()=>{const next=pageSize();if(next!==lastLimit){lastLimit=next;page=1;refreshSamples();}},{passive:true});
 setupMobileVoteLink();
-refreshAll().catch(error=>{setSystemMessage('サーバーAPIに接続できません：'+error.message,'warning');$('pool-caption').textContent='接続待ち';syncControls();$('sample-grid').replaceChildren();showEmpty('サーバーに接続できません','通信状態を確認し、もう一度読み込んでください。','retry');$('page-caption').textContent='接続待ち';});
+refreshAll().catch(error=>{$('service-fallback').hidden=false;setSystemMessage('サーバーAPIに接続できません：'+error.message,'warning');$('pool-caption').textContent='接続待ち';syncControls();$('sample-grid').replaceChildren();showEmpty('サーバーに接続できません','通信状態を確認し、もう一度読み込んでください。','retry');$('page-caption').textContent='接続待ち';});

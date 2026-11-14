@@ -42,3 +42,7 @@ playwright-report/
 !.env.example
 __pycache__/
 .pytest_cache/
+
+# Self-contained local demo generated models and synthetic dataset metadata
+/demo-state/
+/tdm-verified-*/

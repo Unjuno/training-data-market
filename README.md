@@ -63,3 +63,45 @@ python -m pytest tests_py -q
 - [実装状況・残件](docs/acceptance-status.md)
 - [Sites引き継ぎ](docs/sites-handoff.md)
 - [旧静的UIデモ](index.html)
+
+## One-command functional demo (v0.8, **real training on original synthetic pixel art**)
+
+To test the whole game **without downloading CIFAR-10**, start the localhost-only
+procedural training lab. The 1,600 generated 32×32 images are newly drawn by this
+project; **these are NOT CIFAR-10 photos and their metrics say nothing about
+CIFAR-10 accuracy**.
+
+```bash
+python -m pip install -r requirements-ml.txt
+python -m backend.local_demo --port 8000 --round-seconds 90
+```
+
+Visit `http://127.0.0.1:8000/`. The browser can explore actual generated images,
+search, vote on up to 10 samples per session, see other sessions' votes, and review
+real PyTorch experiments when the round closes. The local worker runs both
+Community and Random arms for 40 optimizer steps, evaluates them, applies the
+safety gate and creates the next round. It is **not** a publicly authenticated
+service. For another run use another `--state-root`; the default `demo-state/`
+contains checkpoints and SQLite data and is gitignored. Stop using Ctrl+C.
+
+**Sites:** Static-host build `dist/index.html` now serves the API-driven live page,
+not the fabricated demonstration. Without a configured server the page will
+show an explicit connection error and a link to `dist/demo.html` (local, simulated
+UI-only). For a public Sites launch, connect genuine authentication, server-side
+persistence and an external ML worker. This local command must not bind to
+`0.0.0.0` or serve as the public production backend.
+
+### Verification
+
+```bash
+npm run check && npm run build
+python -m pytest tests_py -q
+python tests_e2e/ux_flow.py                # Chromium UI + simulated API errors
+PYTHONPATH=. python tests_e2e/ui_api_bridge.py  # Chromium UI ↔ real FastAPI, synthetic training
+```
+
+Local Chromium navigation to `127.0.0.1` may be blocked by the execution
+platform. `ui_api_bridge.py` runs the *real* FastAPI app through separate
+TestClient cookie jars bridged to Chromium UI requests. Image responses are
+verified independently by `test_demo_mode.py`. This is a functional integration
+check, **not** validation of browser networking in a deployed public site.

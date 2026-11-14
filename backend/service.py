@@ -35,7 +35,11 @@ def make_app(store:GameStore,state_root:Path):
     secret=os.getenv('TDM_COOKIE_SECRET','').encode()
     if len(secret)<32:
         raise RuntimeError('Set TDM_COOKIE_SECRET to at least 32 random characters')
-    publish_images=os.getenv('TDM_PUBLISH_IMAGES')=='true'
+    manifest=_read_json(state_root/'manifest.json') or {}
+    demo=manifest.get('dataset')=='SYNTHETIC_PIXEL_ART'
+    # Never serve natural-image datasets on the strength of a demo switch.
+    demo_enabled=demo and os.getenv('TDM_DEMO_MODE')=='true'
+    publish_images=os.getenv('TDM_PUBLISH_IMAGES')=='true' or demo_enabled
     app=FastAPI(title='Training Data Market API',version='0.4.1',docs_url=None,redoc_url=None)
 
     @app.exception_handler(GameError)
@@ -95,7 +99,8 @@ def make_app(store:GameStore,state_root:Path):
                 'targets':[round_data['target_a'],round_data['target_b']],
                 'checkpoint':round_data['checkpoint'],'opened_at':round_data['opened_at'],
                 'locked_at':round_data['locked_at']}
-        return {'mode':'LIVE' if stats else 'UNINITIALIZED','metrics':stats,'round':public}
+        return {'mode':('DEMO' if demo else 'LIVE') if stats else 'UNINITIALIZED',
+                'dataset_name':manifest.get('dataset'),'metrics':stats,'round':public}
 
     @app.get('/v1/samples')
     def samples(page:int=Query(1,ge=1),limit:int=Query(48,ge=1,le=48),
@@ -125,14 +130,16 @@ def make_app(store:GameStore,state_root:Path):
         return {'items':enriched,'total':total,'page':page,'limit':limit,
                 'checkpoint':checkpoint if not stale else None,
                 'predictions_stale':stale or preds is None,
-                'image_rights_approved':publish_images}
+                'image_rights_approved':publish_images,'image_kind':('SYNTHETIC_PIXEL_ART' if demo else 'CIFAR-10')}
 
     @app.get('/v1/samples/{sample_id}')
     def sample_detail(sample_id:int):
         info=store.get_sample(sample_id)
         current=store.current_round()
         prediction_data=_read_json(state_root/'predictions'/(current['checkpoint']+'.json')) if current else None
-        pred=(prediction_data or {}).get('samples',{}).get(str(sample_id))
+        pred=((prediction_data or {}).get('samples',{}).get(str(sample_id))
+              if current and prediction_data and prediction_data.get('checkpoint')==current['checkpoint']
+              else None)
         return {**info,'prediction':pred,'class_name':CLASSES[info['label']],
                 'image_url':f'/v1/samples/{sample_id}/image' if publish_images else None}
 
@@ -142,9 +149,10 @@ def make_app(store:GameStore,state_root:Path):
         classes=store.get_classes()
         if sample_id not in classes:raise GameError('image is not eligible',404)
         from backend.ml import CombinedCIFAR
+        from backend.demo_data import SyntheticPixelArt
         from PIL import Image
         root=Path(os.getenv('TDM_DATA_ROOT','data'))
-        ds=CombinedCIFAR(root)
+        ds=SyntheticPixelArt(manifest.get('seed',20261115)) if demo_enabled else CombinedCIFAR(root)
         x,y=ds[sample_id]
         np_img=(x.permute(1,2,0).mul(255).byte().numpy())
         blob=io.BytesIO();Image.fromarray(np_img).save(blob,'PNG');blob.seek(0)

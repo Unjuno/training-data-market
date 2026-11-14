@@ -11,4 +11,6 @@ for(const file of files){
   await cp(path.join(root,file),path.join(out,file),{dereference:false});
 }
 await cp(path.join(root,'index.html'),path.join(out,'demo.html'));
+// Sites/static hosts must enter the real API UI, never the simulated mock page.
+await cp(path.join(root,'live.html'),path.join(out,'index.html'));
 console.log(`Built ${files.length+1} static files in dist/`);

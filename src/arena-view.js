@@ -20,7 +20,7 @@ export function updatePickMeter(count){
   $('mobile-pick-count').textContent=`${count} / 10`;
   $('pick-meter-fill').style.width=`${Math.max(0,Math.min(count,10))*10}%`;
 }
-export function createSampleCard({id,label,prediction=null,votes=0,image_url=null,selected=false,disabled=false,onToggle,demo=false}){
+export function createSampleCard({id,label,prediction=null,votes=0,image_url=null,image_kind='CIFAR-10',selected=false,disabled=false,onToggle,demo=false}){
   const card=document.createElement('article');card.className='sample-card'+(selected?' is-selected':'');
   const art=element(card,'div','','sample-art art-'+label);
   element(art,'span',`DATA / ${String(label).padStart(2,'0')}`,'art-code');
@@ -31,7 +31,7 @@ export function createSampleCard({id,label,prediction=null,votes=0,image_url=nul
     const url=new URL(image_url,window.location.origin);
     if(url.origin===window.location.origin && url.pathname.startsWith('/v1/samples/')){
       const img=document.createElement('img');img.src=url.pathname;img.alt=`学習候補 #${id}、正解クラス：${CLASS_NAMES[label]}`;img.loading='lazy';img.width=160;img.height=160;
-      img.addEventListener('load',()=>{art.querySelector('.art-caption').textContent='CIFAR-10';});
+      img.addEventListener('load',()=>{art.querySelector('.art-caption').textContent=image_kind==='SYNTHETIC_PIXEL_ART'?'合成ピクセルアート':'CIFAR-10';});
       img.addEventListener('error',()=>{img.remove();art.querySelector('.art-caption').textContent='画像を取得できません';});
       art.append(img);
     }
