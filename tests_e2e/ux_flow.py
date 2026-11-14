@@ -17,7 +17,7 @@ def markup():
 
 def js_bundle():
     parts=[]
-    for name in ['src/arena-view.js','live.js']:
+    for name in ['src/arena-view.js','src/deadline.js','live.js']:
         content=(ROOT/name).read_text()
         content=re.sub(r'(?m)^import .*?;\s*$','',content)
         content=re.sub(r'(?m)^export\s+(?=(const|function|class)\b)','',content)
@@ -31,7 +31,7 @@ MOCK='''() => {
  window.fetch=async(input,opts={})=>{
   const url=String(input),method=opts.method||'GET',s=window.__mock;
   s.requests.push(method+' '+url);
-  if(url==='/v1/rounds/current')return res(200,{mode:'LIVE',round:{id:'r1',status:'OPEN',targets:[3,5]},metrics:{public:{overall_loss:0.8,accuracy:0.61}}});
+  if(url==='/v1/rounds/current')return res(200,{mode:'LIVE',server_time:Date.now()/1000,round:{id:'r1',status:'OPEN',targets:[3,5],closes_at:s.deadlineSeconds||Date.now()/1000+3600},metrics:{public:{overall_loss:0.8,accuracy:0.61}}});
   if(url.endsWith('/picks/me'))return res(200,{ids:[...s.picks],note:''});
   if(url.startsWith('/v1/samples?')){
    if(s.failSamples)return res(503,{error:'モデルの予測結果を準備中です'});
@@ -112,6 +112,11 @@ async def main():
         assert await mobile.locator('#page-caption').get_attribute('aria-live')=='polite','result count not announced to assistive technology'
         overflow=await mobile.evaluate('document.documentElement.scrollWidth>window.innerWidth')
         assert not overflow,'horizontal overflow'
+        # The deadline UI must disable votes without waiting for the worker.
+        await mobile.evaluate('window.__mock.deadlineSeconds=Date.now()/1000-1')
+        await mobile.locator('#refresh').click()
+        await mobile.wait_for_function('document.querySelector("#sample-id").disabled===true')
+        assert '締切' in await mobile.locator('#round-countdown').inner_text()
         await mobile.close();await browser.close()
     print('PASS: UX browser workflow (search, vote, focus, refresh, errors, mobile)')
 

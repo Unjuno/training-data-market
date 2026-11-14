@@ -11,6 +11,7 @@ import io
 import json
 import os
 import secrets
+import time
 from pathlib import Path
 from fastapi import FastAPI, Query, Request, Response
 from pydantic import BaseModel, Field
@@ -27,6 +28,12 @@ def _read_json(path:Path):
     except (FileNotFoundError,json.JSONDecodeError):return None
 
 
+def _round_artifact(root:Path,folder:str,round_data:dict):
+    # v0.9 snapshots are keyed by round; v0.8 checkpoints are a read-only fallback.
+    return (_read_json(root/folder/(round_data['id']+'.json')) or
+            _read_json(root/folder/(round_data['checkpoint']+'.json')))
+
+
 class NoteInput(BaseModel):
     text: str = Field(max_length=400)
 
@@ -39,7 +46,10 @@ def make_app(store:GameStore,state_root:Path):
     demo=manifest.get('dataset')=='SYNTHETIC_PIXEL_ART'
     # Never serve natural-image datasets on the strength of a demo switch.
     demo_enabled=demo and os.getenv('TDM_DEMO_MODE')=='true'
-    publish_images=os.getenv('TDM_PUBLISH_IMAGES')=='true' or demo_enabled
+    # An environment switch alone is not a legal/publication approval.
+    natural_rights_ok=(manifest.get('dataset')=='CIFAR-10' and
+                       manifest.get('image_rights_status')=='APPROVED')
+    publish_images=demo_enabled or (natural_rights_ok and os.getenv('TDM_PUBLISH_IMAGES')=='true')
     app=FastAPI(title='Training Data Market API',version='0.4.1',docs_url=None,redoc_url=None)
 
     @app.exception_handler(GameError)
@@ -93,14 +103,16 @@ def make_app(store:GameStore,state_root:Path):
     def current_round(response:Response,request:Request):
         issue_session(request,response)
         round_data=store.current_round()
-        if not round_data:return {'mode':'UNINITIALIZED','metrics':None,'round':None}
-        stats=_read_json(state_root/'metrics'/(round_data['checkpoint']+'.json'))
+        if not round_data:return {'mode':'UNINITIALIZED','metrics':None,'round':None,
+                                  'server_time':time.time()}
+        stats=_round_artifact(state_root,'metrics',round_data)
         public={'id':round_data['id'],'status':round_data['status'],
                 'targets':[round_data['target_a'],round_data['target_b']],
                 'checkpoint':round_data['checkpoint'],'opened_at':round_data['opened_at'],
-                'locked_at':round_data['locked_at']}
+                'closes_at':round_data['closes_at'],'locked_at':round_data['locked_at']}
         return {'mode':('DEMO' if demo else 'LIVE') if stats else 'UNINITIALIZED',
-                'dataset_name':manifest.get('dataset'),'metrics':stats,'round':public}
+                'dataset_name':manifest.get('dataset'),'metrics':stats,'round':public,
+                'server_time':time.time()}
 
     @app.get('/v1/samples')
     def samples(page:int=Query(1,ge=1),limit:int=Query(48,ge=1,le=48),
@@ -108,7 +120,7 @@ def make_app(store:GameStore,state_root:Path):
                 query:str=Query('',max_length=100)):
         current=store.current_round()
         if current is None:raise GameError('training dataset not initialized',503)
-        prediction_data=_read_json(state_root/'predictions'/(current['checkpoint']+'.json'))
+        prediction_data=_round_artifact(state_root,'predictions',current)
         preds=(prediction_data or {}).get('samples')
         # Predictions are checkpoint-specific. Avoid attributing obsolete losses to the current model.
         checkpoint=prediction_data.get('checkpoint') if prediction_data else None
@@ -136,7 +148,7 @@ def make_app(store:GameStore,state_root:Path):
     def sample_detail(sample_id:int):
         info=store.get_sample(sample_id)
         current=store.current_round()
-        prediction_data=_read_json(state_root/'predictions'/(current['checkpoint']+'.json')) if current else None
+        prediction_data=_round_artifact(state_root,'predictions',current) if current else None
         pred=((prediction_data or {}).get('samples',{}).get(str(sample_id))
               if current and prediction_data and prediction_data.get('checkpoint')==current['checkpoint']
               else None)
@@ -180,7 +192,8 @@ def make_app(store:GameStore,state_root:Path):
     def history():
         return {'items':[{'id':r['id'],'status':r['status'],
                           'targets':[r['target_a'],r['target_b']],
-                          'checkpoint':r['checkpoint'],'opened_at':r['opened_at']}
+                          'checkpoint':r['checkpoint'],'opened_at':r['opened_at'],
+                          'closes_at':r['closes_at']}
                          for r in store.list_rounds(20)]}
 
     @app.put('/v1/rounds/{round_id}/note')
@@ -215,7 +228,7 @@ def make_app(store:GameStore,state_root:Path):
     def demo_js():return FileResponse(Path(__file__).resolve().parent.parent/'app.js',media_type='text/javascript')
     @app.get('/src/{script}')
     def browser_src(script:str):
-        permitted={'arena-view.js','demo-data.js','selection.js','draft.js'}
+        permitted={'arena-view.js','deadline.js','demo-data.js','selection.js','draft.js'}
         if script not in permitted:raise GameError('script not found',404)
         return FileResponse(Path(__file__).resolve().parent.parent/'src'/script,media_type='text/javascript')
     @app.get('/demo.html')

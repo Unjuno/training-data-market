@@ -2,6 +2,7 @@
 from __future__ import annotations
 
 import sqlite3
+import os
 import time
 from contextlib import contextmanager
 from pathlib import Path
@@ -41,7 +42,7 @@ class GameStore:
                 CREATE TABLE IF NOT EXISTS rounds (
                   id TEXT PRIMARY KEY, checkpoint TEXT NOT NULL, target_a INTEGER NOT NULL,
                   target_b INTEGER NOT NULL, seed INTEGER NOT NULL, status TEXT NOT NULL,
-                  opened_at REAL NOT NULL, locked_at REAL, finished_at REAL,
+                  opened_at REAL NOT NULL, closes_at REAL, locked_at REAL, finished_at REAL,
                   result_json TEXT);
                 CREATE TABLE IF NOT EXISTS picks (
                   round_id TEXT NOT NULL REFERENCES rounds(id),
@@ -57,6 +58,19 @@ class GameStore:
                   id INTEGER PRIMARY KEY AUTOINCREMENT, round_id TEXT,
                   kind TEXT NOT NULL, details TEXT NOT NULL, at REAL NOT NULL);
             ''')
+            # Migrate v0.8 databases without deleting existing votes or rounds.
+            columns={row['name'] for row in conn.execute('PRAGMA table_info(rounds)')}
+            if 'closes_at' not in columns:
+                conn.execute('ALTER TABLE rounds ADD COLUMN closes_at REAL')
+            fallback=self._round_seconds(None)
+            conn.execute('UPDATE rounds SET closes_at=opened_at+? WHERE closes_at IS NULL', (fallback,))
+
+    @staticmethod
+    def _round_seconds(value:int|None)->int:
+        duration=int(value if value is not None else os.getenv('TDM_ROUND_SECONDS', '86400'))
+        if not 10<=duration<=604800:
+            raise ValueError('round duration must be 10..604800 seconds')
+        return duration
 
     def bootstrap_samples(self, samples, version:str):
         with self._db(True) as conn:
@@ -65,18 +79,21 @@ class GameStore:
             conn.executemany('INSERT INTO samples(id,label,version) VALUES(?,?,?)',
                              [(int(i),int(y),version) for i,y in samples])
 
-    def open_round(self, round_id:str, checkpoint:str,targets:tuple[int,int],seed:int):
+    def open_round(self, round_id:str, checkpoint:str,targets:tuple[int,int],seed:int,
+                   duration_seconds:int|None=None):
         a,b=targets
+        duration=self._round_seconds(duration_seconds)
         with self._db(True) as conn:
             if conn.execute("SELECT 1 FROM rounds WHERE status IN ('OPEN','LOCKED','TRAINING') LIMIT 1").fetchone():
                 raise GameError('another round is active',409)
-            conn.execute('INSERT INTO rounds(id,checkpoint,target_a,target_b,seed,status,opened_at) VALUES(?,?,?,?,?,?,?)',
-                         (round_id,checkpoint,a,b,seed,'OPEN',time.time()))
+            opened=time.time()
+            conn.execute('INSERT INTO rounds(id,checkpoint,target_a,target_b,seed,status,opened_at,closes_at) VALUES(?,?,?,?,?,?,?,?)',
+                         (round_id,checkpoint,a,b,seed,'OPEN',opened,opened+duration))
 
     def list_rounds(self,limit:int=20)->list[dict]:
         with self._db() as conn:
             return [dict(row) for row in conn.execute(
-                'SELECT id,checkpoint,target_a,target_b,status,opened_at,locked_at,finished_at '
+                'SELECT id,checkpoint,target_a,target_b,status,opened_at,closes_at,locked_at,finished_at '
                 'FROM rounds ORDER BY opened_at DESC,id DESC LIMIT ?', (limit,))]
 
     def get_round(self, round_id:str) -> dict:
@@ -91,9 +108,11 @@ class GameStore:
             return dict(r) if r else None
 
     def _check_open(self,conn,round_id):
-        r=conn.execute('SELECT status FROM rounds WHERE id=?',(round_id,)).fetchone()
+        r=conn.execute('SELECT status,closes_at FROM rounds WHERE id=?',(round_id,)).fetchone()
         if r is None:raise GameError('round not found',404)
         if r['status']!='OPEN':raise GameError('round is closed',409)
+        if r['closes_at'] is None or time.time()>=r['closes_at']:
+            raise GameError('voting deadline has passed',409)
 
     def set_pick(self, round_id:str, user_id:str,sample_id:int)->str:
         with self._db(True) as conn:
@@ -155,7 +174,9 @@ class GameStore:
 
     def lock_round(self,round_id:str):
         with self._db(True) as conn:
-            self._check_open(conn,round_id)
+            row=conn.execute('SELECT status FROM rounds WHERE id=?',(round_id,)).fetchone()
+            if row is None:raise GameError('round not found',404)
+            if row['status']!='OPEN':raise GameError('round is closed',409)
             conn.execute('UPDATE rounds SET status=?,locked_at=? WHERE id=?',('LOCKED',time.time(),round_id))
             conn.execute('INSERT INTO events(round_id,kind,details,at) VALUES(?,?,?,?)',
                          (round_id,'ROUND_LOCKED','{}',time.time()))
@@ -177,17 +198,18 @@ class GameStore:
         Only the actually promoted arm's images are removed from availability.
         """
         with self._db(True) as conn:
-            row=conn.execute('SELECT status FROM rounds WHERE id=?',(round_id,)).fetchone()
+            row=conn.execute('SELECT status,opened_at,closes_at FROM rounds WHERE id=?',(round_id,)).fetchone()
             if row is None or row['status']!='LOCKED':
                 raise GameError('round must be LOCKED to finalize',409)
+            duration=self._round_seconds(round(row['closes_at']-row['opened_at']))
             now=time.time()
             conn.execute('UPDATE rounds SET status=?,result_json=?,finished_at=? WHERE id=?',
                          ('PUBLISHED',result_json,now,round_id))
             conn.executemany('UPDATE samples SET available=0 WHERE id=?',
                              [(i,) for i in set(consumed_ids)])
-            conn.execute('INSERT INTO rounds(id,checkpoint,target_a,target_b,seed,status,opened_at) '
-                         'VALUES(?,?,?,?,?,?,?)',
-                         (next_round_id,next_checkpoint,*next_targets,next_seed,'OPEN',now))
+            conn.execute('INSERT INTO rounds(id,checkpoint,target_a,target_b,seed,status,opened_at,closes_at) '
+                         'VALUES(?,?,?,?,?,?,?,?)',
+                         (next_round_id,next_checkpoint,*next_targets,next_seed,'OPEN',now,now+duration))
             conn.execute('INSERT INTO events(round_id,kind,details,at) VALUES(?,?,?,?)',
                          (round_id,'ROUND_PUBLISHED','{}',now))
             conn.execute('INSERT INTO events(round_id,kind,details,at) VALUES(?,?,?,?)',

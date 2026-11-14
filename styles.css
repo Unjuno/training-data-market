@@ -127,3 +127,6 @@ button:disabled{cursor:not-allowed;opacity:.48}input,select,textarea{color:var(-
 .service-fallback:not([hidden]){display:flex;gap:12px;align-items:center;flex-wrap:wrap;margin:12px 0 28px;padding:16px 22px;background:#253128;border:1px solid #71815f;border-radius:12px;color:#f9edce;font-size:14px;line-height:1.65;}
 .service-fallback a{color:#d7ff90;font-weight:700;text-decoration:underline;text-underline-offset:3px;}
 .service-fallback a:focus-visible{outline:3px solid #e6ffc1;outline-offset:4px;border-radius:2px;}
+
+/* Deadline: visible near the ballot but deliberately not a per-second live region. */
+.round-countdown{margin:.45rem 0 1rem;color:var(--ink,#e6f2e8);font-size:.92rem;font-weight:650;letter-spacing:.01em;}
