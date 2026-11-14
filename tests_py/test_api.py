@@ -65,3 +65,12 @@ def test_recommendation_note_and_cross_origin_block(app):
         assert client.get('/v1/samples/3/image').status_code==403
         assert client.get('/v1/samples/3').status_code==200
         assert client.get('/v1/samples/999').status_code==404
+
+
+def test_shared_design_module_is_served_without_exposing_internal_files(app):
+    with TestClient(app) as client:
+        assert client.get('/src/arena-view.js').status_code==200
+        assert 'createSampleCard' in client.get('/src/arena-view.js').text
+        assert client.get('/app.js').status_code==200
+        assert client.get('/src/../../backend/store.py').status_code in (404, 422)
+        assert client.get('/src/store.py').status_code==404

@@ -203,6 +203,13 @@ def make_app(store:GameStore,state_root:Path):
     def styles():return FileResponse(Path(__file__).resolve().parent.parent/'styles.css',media_type='text/css')
     @app.get('/live.css')
     def live_css():return FileResponse(Path(__file__).resolve().parent.parent/'live.css',media_type='text/css')
+    @app.get('/app.js')
+    def demo_js():return FileResponse(Path(__file__).resolve().parent.parent/'app.js',media_type='text/javascript')
+    @app.get('/src/{script}')
+    def browser_src(script:str):
+        permitted={'arena-view.js','demo-data.js','selection.js','draft.js'}
+        if script not in permitted:raise GameError('script not found',404)
+        return FileResponse(Path(__file__).resolve().parent.parent/'src'/script,media_type='text/javascript')
     @app.get('/demo.html')
     def demo_html():return FileResponse(Path(__file__).resolve().parent.parent/'index.html',media_type='text/html')
     return app

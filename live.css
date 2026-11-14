@@ -1,13 +1,4 @@
-/* Live API client additions: keeps the pre-existing responsive design. */
-.live-alert{border:1px solid rgba(14,116,144,.30);background:rgba(14,116,144,.07);border-radius:12px;padding:13px 17px;margin:19px 0;color:inherit;font-size:14px}
-.live-alert[data-level="warning"]{border-color:rgba(217,119,6,.40);background:rgba(217,119,6,.06)}
-.live-paging{display:flex;gap:6px}.live-paging button{white-space:nowrap;padding:7px 11px;font-size:12px}
-.live-art{display:flex;align-items:center;justify-content:center;color:#64748b;font-size:12px;font-weight:600}
-.live-art img{width:100%;height:100%;object-fit:contain;image-rendering:pixelated;max-width:160px;max-height:160px}
-.live-results{margin:28px 0 18px;padding:24px;background:var(--panel, #fff);border:1px solid rgba(148,163,184,.24);border-radius:18px}
-.live-table{width:100%;border-collapse:collapse;margin:12px 0;font-variant-numeric:tabular-nums}
-.live-table td{border-bottom:1px solid rgba(148,163,184,.25);padding:10px 8px;text-align:right;font-size:13px}
-.live-table td:first-child{text-align:left}
-.live-table tr:first-child{font-size:12px;color:#64748b}
-.live-results .muted{font-size:12px}
-@media (max-width:720px){.live-paging{width:100%}.live-paging button{flex:1}.live-results{padding:15px}}
+/* API mode: the same design system is used by the static demo and the live service. */
+body[data-mode="live"] .mode-tag{transition:background .15s,border-color .15s}
+body[data-mode="live"] .mode-tag.is-live{background:#1f3827;border-color:#547850;color:var(--lime)}
+body[data-mode="live"] .mode-tag.is-warning{background:#37261e;border-color:#865c3e;color:#ffd0a6}
