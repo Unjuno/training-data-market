@@ -67,6 +67,15 @@ async def main():
     async with async_playwright() as p:
         browser=await p.chromium.launch(executable_path='/usr/bin/chromium',headless=True,args=['--no-sandbox'])
         page=await page_setup(browser,1440)
+        # The ID field must reject scientific notation, not silently vote for #100.
+        await page.locator('#sample-id').fill('1e2')
+        await page.locator('#id-form-live').evaluate(
+            "form => form.dispatchEvent(new Event('submit',{bubbles:true,cancelable:true}))")
+        await page.wait_for_timeout(250)
+        requests=await page.evaluate('window.__mock.requests')
+        assert not any(req.startswith('PUT ') and req.endswith('/picks/100') for req in requests), \
+            'scientific notation must not be accepted as a different image ID'
+        assert '画像ID' in await page.locator('#vote-status').inner_text()
         # Debounced search updates without requiring an explicit submission.
         await page.locator('#query').fill('103')
         await page.wait_for_timeout(450)

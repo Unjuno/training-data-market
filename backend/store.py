@@ -217,15 +217,31 @@ class GameStore:
 
     def samples_page(self,page:int=1,limit:int=48,label:int|None=None,wrong_only:bool=False,
                      predictions:dict|None=None,search:str=''):
-        # Wrong-only filtering depends on versioned checkpoint predictions, never on fake values.
+        # Page in SQLite so the normal explorer does not load every CIFAR-10
+        # candidate into Python on each user request or automatic refresh.
+        if wrong_only and predictions is None:
+            raise GameError('model predictions are not available',503)
+        if page < 1 or not 1 <= limit <= 48:
+            raise GameError('invalid pagination',422)
+        clauses=['available=1']
+        params=[]
+        if label is not None:
+            clauses.append('label=?');params.append(label)
+        if search:
+            clauses.append('instr(CAST(id AS TEXT), ?) > 0');params.append(search)
+        where=' WHERE '+' AND '.join(clauses)
         with self._db() as conn:
-            rows=conn.execute('SELECT id,label,version FROM samples WHERE available=1 ORDER BY id').fetchall()
-        samples=[dict(row) for row in rows]
-        if label is not None:samples=[r for r in samples if r['label']==label]
-        if search:samples=[r for r in samples if search in str(r['id'])]
-        if wrong_only:
-            if predictions is None:raise GameError('model predictions are not available',503)
-            samples=[r for r in samples if str(r['id']) in predictions and
-                     predictions[str(r['id'])]['predicted']!=r['label']]
-        total=len(samples)
-        return samples[(page-1)*limit:page*limit],total
+            if not wrong_only:
+                total=conn.execute('SELECT count(*) FROM samples'+where, params).fetchone()[0]
+                rows=conn.execute('SELECT id,label,version FROM samples'+where+
+                                  ' ORDER BY id LIMIT ? OFFSET ?',
+                                  [*params,limit,(page-1)*limit]).fetchall()
+                return [dict(row) for row in rows],int(total)
+            # Wrong-only is checkpoint-dependent and cannot be reduced to
+            # class/ID indexes without first joining prediction metadata.
+            rows=conn.execute('SELECT id,label,version FROM samples'+where+
+                              ' ORDER BY id',params).fetchall()
+        filtered=[dict(row) for row in rows if str(row['id']) in predictions and
+                  predictions[str(row['id'])]['predicted'] != row['label']]
+        total=len(filtered)
+        return filtered[(page-1)*limit:page*limit],total

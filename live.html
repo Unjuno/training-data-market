@@ -97,7 +97,7 @@
           <p class="save-explainer">画像の「推薦する」を押した時点で推薦が記録されます。下のボタンは推薦理由のメモ保存専用です。</p>
           <div class="vote-progress"><div class="vote-progress-head"><span>YOUR PICKS</span><strong id="my-count">0 / 10</strong></div><div class="vote-progress-track"><div id="pick-meter-fill" class="vote-progress-fill" style="width:0%"></div></div></div>
           <ol id="my-picks" class="pick-list" aria-live="polite"><li class="pick-empty">まだ推薦がありません。</li></ol>
-          <form id="id-form-live" class="id-form"><label for="sample-id">画像IDから追加 <span class="muted-note">OPTIONAL</span></label><div class="id-input-row"><input id="sample-id" type="number" step="1" min="0" placeholder="例：1204" required><button type="submit" aria-label="画像IDで推薦を追加">＋</button></div></form>
+          <form id="id-form-live" class="id-form"><label for="sample-id">画像IDから追加 <span class="muted-note">OPTIONAL</span></label><div class="id-input-row"><input id="sample-id" type="text" inputmode="numeric" pattern="[0-9]+" placeholder="例：1204" required><button type="submit" aria-label="画像IDで推薦を追加">＋</button></div></form>
           <label class="reason-label" for="reason-live">推薦理由 <span class="muted-note">OPTIONAL</span></label><textarea id="reason-live" rows="3" maxlength="400" placeholder="なぜこのデータが効くと思う？仮説を記録できます。"></textarea>
           <p class="note-state" id="note-state" role="status" aria-live="polite">メモは「保存」を押すまで反映されません。</p>
           <button type="button" id="save-reason" class="vote-main-button">推薦理由のメモを保存 <span aria-hidden="true">↗</span></button>

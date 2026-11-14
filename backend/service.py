@@ -12,6 +12,7 @@ import json
 import os
 import secrets
 import time
+from threading import Lock
 from pathlib import Path
 from fastapi import FastAPI, Query, Request, Response
 from pydantic import BaseModel, Field
@@ -51,6 +52,24 @@ def make_app(store:GameStore,state_root:Path):
                        manifest.get('image_rights_status')=='APPROVED')
     publish_images=demo_enabled or (natural_rights_ok and os.getenv('TDM_PUBLISH_IMAGES')=='true')
     app=FastAPI(title='Training Data Market API',version='0.4.1',docs_url=None,redoc_url=None)
+    # CIFAR-10 loads all training images into memory at construction time.
+    # Reusing one immutable dataset per API process avoids a full reload for
+    # every 32x32 image card. Guard cold startup against parallel requests.
+    image_dataset = None
+    image_dataset_lock = Lock()
+
+    def get_image_dataset():
+        nonlocal image_dataset
+        if image_dataset is None:
+            with image_dataset_lock:
+                if image_dataset is None:
+                    from backend.ml import CombinedCIFAR
+                    from backend.demo_data import SyntheticPixelArt
+                    root = Path(os.getenv('TDM_DATA_ROOT', 'data'))
+                    image_dataset = (SyntheticPixelArt(manifest.get('seed', 20261115))
+                                     if demo_enabled else CombinedCIFAR(root))
+        return image_dataset
+
 
     @app.exception_handler(GameError)
     async def game_error_handler(request:Request,exc:GameError):
@@ -160,12 +179,8 @@ def make_app(store:GameStore,state_root:Path):
         if not publish_images:raise GameError('image publication not approved',403)
         classes=store.get_classes()
         if sample_id not in classes:raise GameError('image is not eligible',404)
-        from backend.ml import CombinedCIFAR
-        from backend.demo_data import SyntheticPixelArt
         from PIL import Image
-        root=Path(os.getenv('TDM_DATA_ROOT','data'))
-        ds=SyntheticPixelArt(manifest.get('seed',20261115)) if demo_enabled else CombinedCIFAR(root)
-        x,y=ds[sample_id]
+        x,y=get_image_dataset()[sample_id]
         np_img=(x.permute(1,2,0).mul(255).byte().numpy())
         blob=io.BytesIO();Image.fromarray(np_img).save(blob,'PNG');blob.seek(0)
         return StreamingResponse(blob,media_type='image/png',headers={'Cache-Control':'private, max-age=300'})
