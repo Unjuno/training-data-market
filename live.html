@@ -3,60 +3,108 @@
 <head>
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width,initial-scale=1">
-  <meta name="description" content="共有AIの弱点を改善する学習データ選択ゲーム">
-  <title>Training Data Market — Live Arena</title>
-  <link rel="stylesheet" href="styles.css"><link rel="stylesheet" href="live.css">
+  <meta name="theme-color" content="#090f14">
+  <meta name="description" content="Training Data Market — AIの苦手を見つけ、学習データを選び、性能の変化を検証する参加型ラボ">
+  <title>Training Data Market | AIを育てる、データの市場</title>
+  <link rel="stylesheet" href="styles.css">
+  <link rel="stylesheet" href="live.css">
   <script type="module" src="live.js"></script>
 </head>
-<body>
-<a href="#main" class="skip-link">本文へ</a>
-<div class="app-shell">
-  <header class="topbar"><div class="brand"><span class="brand-mark" aria-hidden="true">◈</span><span>Training Data Market</span></div><span id="mode-badge" class="pill amber">接続確認中</span></header>
-  <main id="main">
-    <section class="hero" aria-labelledby="headline">
-      <div><p class="eyebrow">COMMUNITY TRAINING / LIVE ARENA</p>
-        <h1 id="headline">選んだデータで、<br>AIを育てる。</h1>
-        <p class="intro">AIの弱点を観察し、学習に有効だと考える画像を推薦。投票はサーバーに保存し、締切後にモデル更新と対照実験で検証します。</p></div>
-      <div class="hero-side"><span class="radar" aria-hidden="true">◎</span><span>現在のクエスト<br><strong id="target-pair">読み込み中</strong></span></div>
-    </section>
-    <p id="app-alert" class="live-alert" role="status" aria-live="polite">学習状態を取得しています。</p>
-    <section class="stats" aria-label="モデルの公開検証指標">
-      <div class="stat"><span>検証 Loss</span><strong id="metric-loss">—</strong></div>
-      <div class="stat"><span>全体 Accuracy</span><strong id="metric-accuracy">—</strong></div>
-      <div class="stat"><span>ラウンド</span><strong id="metric-round">—</strong></div>
-      <div class="stat"><span>推薦上限</span><strong>10 <small>枚/人</small></strong></div>
-    </section>
-    <div class="workspace">
-      <section class="browser-panel" aria-labelledby="browse-title">
-        <div class="section-heading"><div><p class="eyebrow">EXPLORE & PREDICT</p><h2 id="browse-title">画像を探索</h2></div><p class="helper" id="pool-caption">候補画像をページ単位で表示</p></div>
-        <form id="filters" class="filters" role="search">
-          <label class="field grow" for="query"><span>画像ID / クラス名</span><input id="query" type="search" placeholder="例：103、cat" autocomplete="off"></label>
-          <label class="field" for="label-filter"><span>正解クラス</span><select id="label-filter"><option value="">すべて</option></select></label>
-          <label class="checkfield"><input id="wrong-only-live" type="checkbox"> <span>誤分類のみ</span></label>
-          <button class="button secondary" type="submit">検索</button>
-        </form>
-        <p class="small muted" id="dataset-rights">画像公開が許可されていない場合、画像を表示できません。</p>
-        <div class="list-tools"><p id="page-caption">候補を読み込み中…</p><div class="live-paging"><button type="button" id="prev-page" class="button secondary">前へ</button><button type="button" id="next-page" class="button secondary">次へ</button></div></div>
-        <div id="sample-grid" class="sample-grid" aria-live="polite"></div><p class="empty" id="empty-state" hidden>一致するデータがありません。</p>
+<body class="arena" data-mode="live">
+  <a href="#main" class="skip-link">メインコンテンツへ移動</a>
+  <div class="noise" aria-hidden="true"></div>
+  <div class="app-shell">
+    <header class="topbar">
+      <a href="#main" class="brand" aria-label="Training Data Market トップ">
+        <span class="brand-emblem" aria-hidden="true"><span class="brand-grid">▦</span><span class="brand-dot"></span></span>
+        <span class="brand-type"><strong>DATA<span class="brand-accent">/</span>MARKET</strong><small>TRAINING DATA MARKET</small></span>
+      </a>
+      <nav class="top-nav" aria-label="メインナビゲーション">
+        <a href="#explore" class="nav-link current">データを探す</a>
+        <a href="#results-section" class="nav-link">学習結果</a>
+        <a href="#how-it-works" class="nav-link">しくみ</a>
+      </nav>
+      <div class="header-actions">
+        <span class="version-label">EXPERIMENTAL / V0.6</span>
+        <span class="mode-tag" id="mode-badge"><span class="status-led" aria-hidden="true"></span> 接続確認中</span>
+      </div>
+    </header>
+
+    <main id="main">
+      <section class="hero" aria-labelledby="headline">
+        <div class="hero-content">
+          <p class="kicker"><span class="kicker-symbol">◆</span> HUMAN-IN-THE-LOOP EXPERIMENT <span class="kicker-index">001 — 010</span></p>
+          <h1 id="headline">次の一枚が、<br><span>AIの未来を変える。</span></h1>
+          <p class="hero-lead">AIの弱点を見つけよう。学習に効くと思う画像を選び、<br class="desktop-break">みんなの推薦でAIの次の学習を決める。結果は実験で検証する。</p>
+          <div class="hero-actions"><a class="cta-primary" href="#explore">学習データを探す <span aria-hidden="true">↗</span></a><a class="cta-secondary" href="#how-it-works">ゲームのしくみ <span aria-hidden="true">↘</span></a></div>
+          <div class="hero-footnote"><span class="hero-footline"></span> 画像選択 → 集計 → 2モデルの比較実験。金銭の賭けはありません。</div>
+        </div>
+        <div class="quest-card" aria-label="今回のクエスト">
+          <div class="quest-glow" aria-hidden="true"></div>
+          <div class="quest-overline"><span class="corner-spark" aria-hidden="true">✳</span><span>CURRENT MISSION</span><span class="quest-round" id="quest-round">ROUND —</span></div>
+          <div class="quest-visual" aria-hidden="true">
+            <div class="target-emblem target-left"><span class="target-icon" id="quest-visual-a">?</span><small id="quest-name-a">UNKNOWN</small></div>
+            <div class="versus-mark"><div class="versus-line"></div><span>VS</span><div class="versus-line"></div></div>
+            <div class="target-emblem target-right"><span class="target-icon" id="quest-visual-b">?</span><small id="quest-name-b">UNKNOWN</small></div>
+          </div>
+          <div class="quest-caption"><span class="quest-prefix">MISSION OBJECTIVE</span><h2 id="target-pair">弱点を解析中</h2><p>この2クラスの識別性能を、追加学習で改善できるか。</p></div>
+          <div class="quest-steps" aria-label="実験の進行段階"><span class="step-current">01 <b>観察</b></span><span>02 <b>推薦</b></span><span>03 <b>学習</b></span><span>04 <b>検証</b></span></div>
+        </div>
       </section>
-      <aside class="vote-panel" aria-labelledby="picks-title">
-        <div class="vote-header"><p class="eyebrow">MY VOTES</p><h2 id="picks-title">推薦リスト <span id="my-count">0 / 10</span></h2></div>
-        <p class="small muted">この版ではブラウザごとに署名付きの匿名セッションを発行します。これは本人確認済みアカウントではありません。</p>
-        <form id="id-form-live" class="id-form"><label class="field grow" for="sample-id"><span>画像IDを直接入力</span><input id="sample-id" type="number" step="1" min="0" placeholder="例：1234" required></label><button class="button secondary" type="submit">推薦</button></form>
-        <ul id="my-picks" class="pick-list" aria-live="polite"><li class="muted">読み込み中</li></ul>
-        <label class="field" for="reason-live"><span>推薦理由（任意・400文字以内）</span><textarea id="reason-live" rows="4" maxlength="400" placeholder="この画像が有効だと思う理由"></textarea></label>
-        <button type="button" id="save-reason" class="button secondary wide">理由をサーバーに保存</button>
-        <p id="vote-status" class="status" role="status" aria-live="polite"></p>
-        <button type="button" id="refresh" class="button primary wide">学習状態を更新</button>
-        <div class="rule-note"><strong>学習方法</strong><p>最大64枚が投票から選択され、ランダム補完と合わせて128枚を構成。同一チェックポイントからランダム対照モデルも学習し、損失の改善を比較します。</p></div>
-      </aside>
-    </div>
-    <section class="live-results" aria-labelledby="results-title">
-      <div class="section-heading"><div><p class="eyebrow">AUDITABLE RESULTS</p><h2 id="results-title">直近の学習結果</h2></div></div>
-      <div id="results" class="result-body" aria-live="polite">まだ結果がありません。ラウンドの終了後に、実際の計測値を表示します。</div>
-    </section>
-  </main>
-  <footer>実際のCIFAR-10データが必要です。公開前に画像の再配布条件と認証を確認してください。<a href="/demo.html">静的UIデモ</a> · <a href="https://github.com/Unjuno/training-data-market">GitHub</a></footer>
-</div>
+
+      <section class="model-summary" aria-label="現在のモデル状態">
+        <div class="summary-label"><span class="mini-graphic">◉</span> MODEL STATUS <small>共有AIの現在地</small></div>
+        <div class="summary-metrics">
+          <div class="summary-metric"><small>VALIDATION LOSS</small><div><strong id="metric-loss">—</strong><span class="metric-unit">↓ LOW IS BETTER</span></div></div>
+          <div class="summary-metric"><small>ACCURACY</small><div><strong id="metric-accuracy">—</strong><span class="metric-unit">10 CLASSES</span></div></div>
+          <div class="summary-metric"><small>TRAINING ROUND</small><div><strong id="metric-round">—</strong><span class="metric-unit">CURRENT</span></div></div>
+          <div class="summary-metric summary-metric-final"><small>PICKS / PERSON</small><div><strong>10</strong><span class="metric-unit">MAXIMUM</span></div></div>
+        </div>
+      </section>
+
+      <div class="alert-wrap"><p id="app-alert" class="app-alert" data-level="info" role="status" aria-live="polite"><span class="alert-indicator" aria-hidden="true"></span><span class="alert-label">SYSTEM MESSAGE</span><span id="app-alert-text">学習状態を取得しています。</span></p></div>
+
+      <div class="workspace" id="explore">
+        <section class="explorer" aria-labelledby="browse-title">
+          <div class="section-head"><div><div class="section-overline"><span>01</span> / THE DATA EXPLORER</div><h2 id="browse-title">価値のあるデータを、<em>見つけよう。</em></h2><p>AIがどこで迷っているかを観察し、次の学習に役立つ画像を探します。</p></div><div class="explorer-counter" id="pool-caption">候補を読み込み中</div></div>
+
+          <form id="filters" class="filter-panel" role="search" autocomplete="off">
+            <label class="search-field" for="query"><span class="field-icon" aria-hidden="true">⌕</span><span class="sr-only">画像ID / クラスを検索</span><input id="query" name="query" type="search" placeholder="画像ID、クラス名で検索（例：cat / 1204）" autocomplete="off"></label>
+            <label class="select-field" for="label-filter"><span class="sr-only">正解クラスを選択</span><select id="label-filter" name="label"><option value="">すべてのクラス</option></select></label>
+            <label class="filter-toggle" for="wrong-only-live"><input id="wrong-only-live" name="wrong" type="checkbox"><span class="toggle-track" aria-hidden="true"></span><span>誤分類だけ</span></label>
+            <button class="filter-submit" type="submit">絞り込む <span aria-hidden="true">↗</span></button>
+          </form>
+          <div class="explorer-tools"><div><span class="view-indicator" aria-hidden="true">▦</span><span id="page-caption">データを読み込んでいます</span></div><div class="paging"><button type="button" id="prev-page" class="page-btn" aria-label="前のページ">← 前へ</button><button type="button" id="next-page" class="page-btn" aria-label="次のページ">次へ →</button></div></div>
+          <p id="dataset-rights" class="rights-banner"><span aria-hidden="true">ⓘ</span> 画像の公開許可がない場合は代替表示になります。Loss等は実測が取得できた場合のみ表示します。</p>
+          <div id="sample-grid" class="sample-grid" aria-live="polite"></div>
+          <div class="empty-state" id="empty-state" hidden><span aria-hidden="true">⊘</span><h3>一致するデータがありません</h3><p>検索条件を変更してください。</p></div>
+          <div class="explorer-footer"><span>DATA DECIDES DIRECTION.</span><span>EXPLORE RESPONSIBLY · 32 × 32 RGB</span></div>
+        </section>
+
+        <aside class="vote-panel" id="vote-panel" aria-labelledby="picks-title">
+          <div class="ballot-top"><div class="section-overline"><span>02</span> / YOUR SELECTION</div><span class="ballot-symbol" aria-hidden="true">✳</span></div>
+          <h2 id="picks-title">あなたの、<br><em>次の一手。</em></h2>
+          <p class="ballot-intro">このAIに学習させたいデータを選びます。最大10枚。締切前なら変更可能です。</p>
+          <div class="vote-progress"><div class="vote-progress-head"><span>YOUR PICKS</span><strong id="my-count">0 / 10</strong></div><div class="vote-progress-track"><div id="pick-meter-fill" class="vote-progress-fill" style="width:0%"></div></div></div>
+          <ol id="my-picks" class="pick-list" aria-live="polite"><li class="pick-empty">まだ推薦がありません。</li></ol>
+          <form id="id-form-live" class="id-form"><label for="sample-id">画像IDから追加 <span class="muted-note">OPTIONAL</span></label><div class="id-input-row"><input id="sample-id" type="number" step="1" min="0" placeholder="例：1204" required><button type="submit" aria-label="画像IDで推薦を追加">＋</button></div></form>
+          <label class="reason-label" for="reason-live">推薦理由 <span class="muted-note">OPTIONAL</span></label><textarea id="reason-live" rows="3" maxlength="400" placeholder="なぜこのデータが効くと思う？仮説を記録できます。"></textarea>
+          <button type="button" id="save-reason" class="vote-main-button">推薦理由を保存 <span aria-hidden="true">↗</span></button>
+          <p id="vote-status" class="vote-status" role="status" aria-live="polite"></p>
+          <button type="button" id="refresh" class="refresh-button">↻ 最新の状態に更新</button>
+          <div class="ballot-legal"><strong>EXPERIMENT RULE</strong><p>上位の推薦最大64枚とランダム補完で128枚を構成。同条件のランダム対照と比較します。クリックした瞬間には学習しません。</p><p>匿名ブラウザセッションは本人確認ではありません。</p></div>
+        </aside>
+      </div>
+
+      <section class="results-section" id="results-section" aria-labelledby="results-title">
+        <div class="section-head result-head"><div><div class="section-overline"><span>03</span> / LEARNING RESULTS</div><h2 id="results-title">その一票は、<em>効いたのか。</em></h2><p>実際の学習結果を、同じ出発点のランダム学習と比較します。</p></div><span class="result-mark" aria-hidden="true">↗</span></div>
+        <div id="results" class="results-surface" aria-live="polite"><div class="results-pending"><span class="pending-symbol" aria-hidden="true">◌</span><h3>学習結果を待っています</h3><p>ラウンドが完了したら、ここに実測Lossとモデルの採用判定を表示します。</p></div></div>
+      </section>
+
+      <section class="how-it-works" id="how-it-works" aria-labelledby="how-title"><div class="how-heading"><p class="section-overline">THE MECHANISM / 04</p><h2 id="how-title">あなたの選択が、<br>学習の方向をつくる。</h2></div><div class="how-grid"><div class="how-item"><span>01 — OBSERVE</span><strong>弱点を見る</strong><p>公開された損失や誤分類を観察。</p></div><div class="how-item"><span>02 — SELECT</span><strong>データを選ぶ</strong><p>理由のある推薦を10枚まで登録。</p></div><div class="how-item"><span>03 — TRAIN</span><strong>実際に学習</strong><p>集計した画像で共有AIを更新。</p></div><div class="how-item"><span>04 — VERIFY</span><strong>実験で確かめる</strong><p>ランダム選択との性能差を公開。</p></div></div></section>
+    </main>
+    <footer class="site-footer"><div><strong>DATA<span>/</span>MARKET</strong><p>Collectively shaping intelligence.</p></div><div><a href="https://github.com/Unjuno/training-data-market" target="_blank" rel="noopener noreferrer">GITHUB ↗</a><a href="demo.html">DEMO MODE ↗</a></div><small>RESEARCH PROTOTYPE · 実学習・権利状態を確認してから公開してください。</small></footer>
+  </div>
+  <a class="mobile-vote-link" href="#vote-panel">推薦リストを確認 <span id="mobile-pick-count">0 / 10</span><span aria-hidden="true">↑</span></a>
 </body>
 </html>
