@@ -74,10 +74,16 @@
             <label class="filter-toggle" for="wrong-only-live"><input id="wrong-only-live" name="wrong" type="checkbox"><span class="toggle-track" aria-hidden="true"></span><span>誤分類だけ</span></label>
             <button class="filter-submit" type="submit">絞り込む <span aria-hidden="true">↗</span></button>
           </form>
-          <div class="explorer-tools"><div><span class="view-indicator" aria-hidden="true">▦</span><span id="page-caption">データを読み込んでいます</span></div><div class="paging"><button type="button" id="prev-page" class="page-btn" aria-label="前のページ">← 前へ</button><button type="button" id="next-page" class="page-btn" aria-label="次のページ">次へ →</button></div></div>
+          <p class="explorer-help">ヒント：誤分類やLossの大きさは判断材料です。高いLossの画像が必ず学習に有効とは限りません。</p>
+          <div class="explorer-tools"><div><span class="view-indicator" aria-hidden="true">▦</span><span id="page-caption" role="status" aria-live="polite" tabindex="-1">データを読み込んでいます</span></div><div class="paging"><button type="button" id="prev-page" class="page-btn" aria-label="前のページ">← 前へ</button><button type="button" id="next-page" class="page-btn" aria-label="次のページ">次へ →</button></div></div>
           <p id="dataset-rights" class="rights-banner"><span aria-hidden="true">ⓘ</span> 画像の公開許可がない場合は代替表示になります。Loss等は実測が取得できた場合のみ表示します。</p>
           <div id="sample-grid" class="sample-grid" aria-live="polite"></div>
-          <div class="empty-state" id="empty-state" hidden><span aria-hidden="true">⊘</span><h3>一致するデータがありません</h3><p>検索条件を変更してください。</p></div>
+          <div class="empty-state" id="empty-state" hidden><span aria-hidden="true">⊘</span><h3 id="empty-heading">一致するデータがありません</h3><p id="empty-description">検索条件を変更してください。</p><button id="empty-action" class="empty-action" type="button">条件をクリア</button></div>
+          <nav class="bottom-pagination" aria-label="データページの移動">
+            <button id="prev-page-bottom" class="page-btn" type="button">← 前のページ</button>
+            <span id="bottom-page-label" aria-hidden="true">ページ —</span>
+            <button id="next-page-bottom" class="page-btn" type="button">次のページ →</button>
+          </nav>
           <div class="explorer-footer"><span>DATA DECIDES DIRECTION.</span><span>EXPLORE RESPONSIBLY · 32 × 32 RGB</span></div>
         </section>
 
@@ -85,12 +91,15 @@
           <div class="ballot-top"><div class="section-overline"><span>02</span> / YOUR SELECTION</div><span class="ballot-symbol" aria-hidden="true">✳</span></div>
           <h2 id="picks-title">あなたの、<br><em>次の一手。</em></h2>
           <p class="ballot-intro">このAIに学習させたいデータを選びます。最大10枚。締切前なら変更可能です。</p>
+          <p id="round-phase" class="round-phase" role="status" aria-live="polite">投票状況を確認中</p>
+          <p class="save-explainer">画像の「推薦する」を押した時点で推薦が記録されます。下のボタンは推薦理由のメモ保存専用です。</p>
           <div class="vote-progress"><div class="vote-progress-head"><span>YOUR PICKS</span><strong id="my-count">0 / 10</strong></div><div class="vote-progress-track"><div id="pick-meter-fill" class="vote-progress-fill" style="width:0%"></div></div></div>
           <ol id="my-picks" class="pick-list" aria-live="polite"><li class="pick-empty">まだ推薦がありません。</li></ol>
           <form id="id-form-live" class="id-form"><label for="sample-id">画像IDから追加 <span class="muted-note">OPTIONAL</span></label><div class="id-input-row"><input id="sample-id" type="number" step="1" min="0" placeholder="例：1204" required><button type="submit" aria-label="画像IDで推薦を追加">＋</button></div></form>
           <label class="reason-label" for="reason-live">推薦理由 <span class="muted-note">OPTIONAL</span></label><textarea id="reason-live" rows="3" maxlength="400" placeholder="なぜこのデータが効くと思う？仮説を記録できます。"></textarea>
-          <button type="button" id="save-reason" class="vote-main-button">推薦理由を保存 <span aria-hidden="true">↗</span></button>
-          <p id="vote-status" class="vote-status" role="status" aria-live="polite"></p>
+          <p class="note-state" id="note-state" role="status" aria-live="polite">メモは「保存」を押すまで反映されません。</p>
+          <button type="button" id="save-reason" class="vote-main-button">推薦理由のメモを保存 <span aria-hidden="true">↗</span></button>
+          <p id="vote-status" class="vote-status" role="status" aria-live="polite" tabindex="-1"></p>
           <button type="button" id="refresh" class="refresh-button">↻ 最新の状態に更新</button>
           <div class="ballot-legal"><strong>EXPERIMENT RULE</strong><p>上位の推薦最大64枚とランダム補完で128枚を構成。同条件のランダム対照と比較します。クリックした瞬間には学習しません。</p><p>匿名ブラウザセッションは本人確認ではありません。</p></div>
         </aside>

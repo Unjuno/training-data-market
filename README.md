@@ -4,6 +4,14 @@
 
 **実装状態：ローカルAPI・投票・PyTorch学習コアを実装し、合成データでテスト済み。CIFAR-10本体は同梱しておらず、実データでの測定・Sites公開は未実施です。** 学習済みだと偽る表示をしていません。
 
+## UX品質の改善（v0.7）
+
+- 画像検索の300ms自動更新、各画面幅に応じた小さなページサイズ、一覧末尾からのページ移動。
+- 推薦のサーバー保存を即時フィードバック。失敗時は画像IDと理由メモを維持し、エラーと検索結果0件を区別する。
+- メモの保存状態と推薦の確定を分ける。キーボード操作の焦点を保持する。
+- [UX品質仕様と未実施の人間テスト](docs/ux-quality-v0.7.md)。
+- オプションのChromium実ブラウザ操作テスト: `python tests_e2e/ux_flow.py`（PlaywrightとChromiumが必要）。
+
 ## 重要：Sitesと学習ワーカーは別
 
 ChatGPT Sitesには`@Sites`でサイトを作成できますが、PyTorch学習がSitesのランタイムで実行できるとは前提にしません。`live.html`と`live.js`をUI基盤とし、Sites内の認証・永続DBまたは認証済みの外部APIへ接続します。Python学習ワーカーは別ホストが必要です。具体的な引き継ぎは[SITES_PROMPT.md](SITES_PROMPT.md)と[docs/sites-handoff.md](docs/sites-handoff.md)を参照。
