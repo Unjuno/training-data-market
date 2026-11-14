@@ -1,0 +1,31 @@
+# Never commit local datasets, checkpoints, secrets or evaluation outputs
+.env
+.env.*
+!.env.example
+__pycache__/
+.pytest_cache/
+.venv/
+venv/
+node_modules/
+*.pt
+*.pth
+*.ckpt
+*.safetensors
+*.onnx
+*.bin
+*.pkl
+*.pickle
+data/raw/
+data/private/
+data/cifar-10*/
+checkpoints/
+artifacts/
+results/private/
+.DS_Store
+
+# Generated build and local working files
+dist/
+.superpowers/
+.worktrees/
+*.log
+playwright-report/

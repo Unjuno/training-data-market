@@ -1,0 +1,67 @@
+<!doctype html>
+<html lang="ja">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <meta name="description" content="Training Data Market: AIの弱点を学習データ選択で克服する共同育成ゲームのプロトタイプ">
+  <title>Training Data Market — 探索・推薦デモ</title>
+  <link rel="stylesheet" href="styles.css">
+  <script type="module" src="app.js"></script>
+</head>
+<body>
+  <noscript>このデモにはJavaScriptが必要です。画面の数値は架空で、AIの学習は行いません。</noscript>
+  <a class="skip-link" href="#main">コンテンツへ移動</a>
+  <div class="app-shell">
+    <header class="topbar">
+      <div class="brand"><span class="brand-mark" aria-hidden="true">◈</span><span>Training Data Market</span></div>
+      <span class="pill amber">DEMO · 学習未接続</span>
+    </header>
+
+    <main id="main">
+      <section class="hero" aria-labelledby="hero-title">
+        <div>
+          <p class="eyebrow">COMMUNITY TRAINING ARENA / ROUND 01</p>
+          <h1 id="hero-title">AIの弱点を、<br>次のデータで変える。</h1>
+          <p class="intro">画像を調べて「このデータを学習させるべき」と推薦する。今はUI確認用デモで、投票・再学習はサーバーに接続されていません。</p>
+        </div>
+        <div class="hero-side"><span class="radar" aria-hidden="true">◎</span><span>クエスト表示例（架空）<br><strong>猫と犬の誤分類を減らす</strong></span></div>
+      </section>
+
+      <section class="stats" aria-label="モデル状態（架空の表示例）">
+        <div class="stat"><span>検証 Loss <small>（架空）</small></span><strong>0.82</strong></div>
+        <div class="stat"><span>全体 Accuracy <small>（架空）</small></span><strong>61.4%</strong></div>
+        <div class="stat"><span>候補画像 <small>（デモ）</small></span><strong>30</strong></div>
+        <div class="stat"><span>推薦上限</span><strong>10 <small>枚/人</small></strong></div>
+      </section>
+
+      <div class="workspace">
+        <section class="browser-panel" aria-labelledby="browse-title">
+          <div class="section-heading"><div><p class="eyebrow">DATA EXPLORER</p><h2 id="browse-title">学習候補を探す</h2></div><p class="helper">検索・並び替えで有望なサンプルを見つける</p></div>
+          <form id="filter-form" class="filters" role="search" autocomplete="off">
+            <label class="field grow" for="search"><span>検索（画像ID・クラス名）</span><input id="search" type="search" placeholder="例：猫、犬、1001" /></label>
+            <label class="field" for="class-filter"><span>正解クラス</span><select id="class-filter"><option value="all">すべて</option></select></label>
+            <label class="field" for="sort"><span>並び替え</span><select id="sort"><option value="loss">Loss が高い順</option><option value="id">画像 ID 順</option><option value="class">クラス順</option></select></label>
+            <label class="checkfield"><input type="checkbox" id="wrong-only"> <span>誤分類のみ</span></label>
+          </form>
+          <div class="list-tools"><p id="result-count" aria-live="polite"></p><p class="muted">画像は絵文字のダミー表示です。CIFAR-10データは同梱していません。</p></div>
+          <div id="sample-grid" class="sample-grid" aria-label="サンプル一覧"></div>
+          <p id="empty-message" class="empty" hidden>条件に一致する候補がありません。</p>
+        </section>
+
+        <aside class="vote-panel" aria-labelledby="vote-title">
+          <div class="vote-header"><p class="eyebrow">YOUR PICKS</p><h2 id="vote-title">推薦リスト <span id="pick-count">0 / 10</span></h2></div>
+          <p class="small muted">選択はこのブラウザ内で保存できます。学習ワーカーや他のプレイヤーには送信されません。</p>
+          <form id="id-form" class="id-form"><label class="field grow" for="id-input"><span>画像IDを直接入力</span><input type="number" id="id-input" min="1001" max="1030" step="1" placeholder="例：1001" required /></label><button type="submit" class="button secondary">追加</button></form>
+          <ul id="pick-list" class="pick-list" aria-live="polite"><li class="muted">まだ選択されていません。</li></ul>
+          <label class="field" for="reason"><span>推薦理由（任意）</span><textarea id="reason" rows="4" maxlength="400" placeholder="例：猫と犬を混同しているので、この画像が有効だと考える"></textarea></label>
+          <button id="save-picks" class="button primary wide" type="button">推薦をローカル保存</button>
+          <button id="clear-picks" class="button ghost wide" type="button">選択を解除</button>
+          <p id="status" class="status" aria-live="polite"></p>
+          <div class="rule-note"><strong>次の段階で接続する機能</strong><p>投票締切 → 128枚を選択 → 投票モデルとランダム対照モデルを同条件で学習 → Lossの差を公開。</p></div>
+        </aside>
+      </div>
+    </main>
+    <footer>Sites handoff v0.2 · Synthetic data only · <a href="docs/spec-v0.4.md">統合仕様 v0.4</a> · <a href="docs/sites-handoff.md">Sitesへの引き継ぎ</a></footer>
+  </div>
+</body>
+</html>
