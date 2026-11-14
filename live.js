@@ -178,7 +178,9 @@ $('empty-action').addEventListener('click',()=>{
 });
 $('id-form-live').addEventListener('submit',async e=>{
   e.preventDefault();const input=$('sample-id');const raw=input.value.trim();
-  if(raw===''){status('画像IDを入力してください。','error');return;}
+  if(!/^\d+$/.test(raw)||!Number.isSafeInteger(Number(raw))){
+    status('画像IDは半角数字の0以上の整数で入力してください。','error');return;
+  }
   if(await vote(Number(raw),true))input.value='';
 });
 $('reason-live').addEventListener('input',()=>{noteDirty=true;$('note-state').textContent='未保存のメモがあります。推薦操作をしても内容は消えません。';});
