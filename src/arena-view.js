@@ -120,7 +120,11 @@ export function setupMobileVoteLink(){
   const update=()=>{
     const ballot=$('vote-panel').getBoundingClientRect();
     const ballotInView=ballot.top<innerHeight-90 && ballot.bottom>80;
-    link.classList.toggle('is-visible',window.scrollY>460&&!ballotInView);
+    const readingResults=['results-section','how-it-works'].some(id=>{
+      const r=$(id)?.getBoundingClientRect();
+      return r && r.top<innerHeight-70 && r.bottom>70;
+    });
+    link.classList.toggle('is-visible',window.scrollY>460&&!ballotInView&&!readingResults);
   };
   window.addEventListener('scroll',update,{passive:true});window.addEventListener('resize',update,{passive:true});update();
 }

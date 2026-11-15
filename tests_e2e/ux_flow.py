@@ -2,7 +2,6 @@
 import asyncio
 from pathlib import Path
 import re
-from playwright.async_api import async_playwright
 
 ROOT = Path(__file__).resolve().parents[1]
 
@@ -11,7 +10,7 @@ def markup():
     html=(ROOT/'live.html').read_text()
     html=re.sub(r'<link rel="stylesheet" href="[^"]+">','',html)
     html=re.sub(r'<script type="module" src="[^"]+"></script>','',html)
-    css=(ROOT/'styles.css').read_text()+'\n'+(ROOT/'live.css').read_text()
+    css=(ROOT/'styles.css').read_text()+'\n'+(ROOT/'live.css').read_text()+'\n'+(ROOT/'game.css').read_text()
     return html.replace('</head>','<style>'+css+'</style></head>')
 
 
@@ -64,6 +63,7 @@ async def page_setup(browser,width):
     return page
 
 async def main():
+    from playwright.async_api import async_playwright
     async with async_playwright() as p:
         browser=await p.chromium.launch(executable_path='/usr/bin/chromium',headless=True,args=['--no-sandbox'])
         page=await page_setup(browser,1440)
@@ -137,6 +137,10 @@ async def main():
         await mobile.locator('#refresh').click()
         await mobile.wait_for_function('document.querySelector("#sample-id").disabled===true')
         assert '締切' in await mobile.locator('#round-countdown').inner_text()
+        # Sticky shortcut must not cover the result recap on mobile.
+        await mobile.locator('#how-it-works').scroll_into_view_if_needed()
+        await mobile.wait_for_timeout(350)
+        assert 'is-visible' not in (await mobile.locator('.mobile-vote-link').get_attribute('class'))
         await mobile.close();await browser.close()
     print('PASS: UX browser workflow (search, vote, focus, refresh, errors, mobile)')
 

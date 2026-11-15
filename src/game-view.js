@@ -21,3 +21,35 @@ export function forecastHint(percent){
   if(percent===50)return '50%：五分五分の予測（基準点は75 pt）';
   return `${percent}%：CommunityがRandomより対象Lossを下げると予測`;
 }
+
+/** An actionable destination for the player, derived only from saved state. */
+export function nextAction({count=0,hasForecast=false,canVote=false,hasResults=false}={}){
+  if(!canVote)return hasResults?
+    {href:'#results-section',label:'直近の結果を見る',description:'投票受付が終わりました。前回の学習結果を確認できます。'}:
+    {href:'#batch-rail',label:'バッチ処理の状況を見る',description:'締切後は投票を変更できません。'};
+  if(count===0)return {href:'#explore',label:'画像を選ぶ',description:'気になる画像をまず1枚推薦してください。'};
+  if(!hasForecast)return {href:'#prediction-section',label:'勝敗を予測する',description:'次はCommunityとRandomの勝敗を予測しましょう。'};
+  return hasResults?
+    {href:'#results-section',label:'前回の実験を見る',description:'今回の推薦と予測は保存済み。前回の結果を見て次の戦略を考えましょう。'}:
+    {href:'#batch-rail',label:'締切時刻を確認する',description:'今回の推薦と予測は保存済みです。結果発表までお待ちください。'};
+}
+
+/** Do not imply a single image caused a model accuracy improvement. */
+export function participationMessage(summary){
+  if(!summary)return null;
+  if(!summary.recommended_count)return 'このラウンドは画像を推薦していません。';
+  if(!Number.isInteger(summary.adopted_count))return '当時の投票枠の採用記録がありません。';
+  return `あなたの推薦 ${summary.recommended_count}枚中${summary.adopted_count}枚が投票枠から学習バッチに採用されました。`;
+}
+
+/** A previous round's result must not fill the current round's step 04. */
+export function isCurrentRoundRevealed(current, publishedRoundId){
+  return Boolean(current?.status==='PUBLISHED' && current.id===publishedRoundId);
+}
+
+/** Winning the forecast and promoting a model are separate decisions. */
+export function promotionMessage(promotion){
+  if(promotion==='community')return 'Communityモデルが共有AIに採用されました。';
+  if(promotion==='random')return 'Community側でも学習しましたが、共有AIにはRandomモデルが採用されました。';
+  return '学習実験は行われましたが、共有AIの更新は見送られました。';
+}
