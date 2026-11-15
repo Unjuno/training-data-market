@@ -1,0 +1,368 @@
+/* TRAINING DATA MARKET / EXPERIENCE DESIGN v1.4
+   Game-first editorial layout.  No external fonts, tracking, or visual dependencies.
+   All actual data, votes and model metrics remain server-owned. */
+:root {
+  --lime:#c9f77b;
+  --lime-ink:#14251b;
+  --game-cream:#f4f6ef;
+  --game-paper:#ffffff;
+  --game-ink:#1a2a25;
+  --game-muted:#5c7067;
+  --game-outline:#dbe4da;
+  --game-coral:#f48567;
+  --game-sky:#b5d9f8;
+  --game-blue:#84aaff;
+  --game-shape:24px;
+}
+body {background:#0c1217;color:#f3f8f3;background-image:radial-gradient(ellipse 62% 40% at 55% 0%,#1d3132 0%,transparent 76%)}
+body::before {background:radial-gradient(ellipse 46% 36% at 80% 17%,rgba(83,158,145,.12),transparent 75%);height:700px}
+.noise {opacity:.015}
+.app-shell {width:min(1460px,calc(100% - 88px))}
+.topbar {height:80px;border-color:#293a3b}
+.brand {gap:13px}
+.brand-emblem {width:46px;height:46px;transform:rotate(-7deg);background:var(--lime);border:1px solid #daf9aa;border-radius:14px;box-shadow:0 9px 28px #b3ef6720}
+.brand-grid {color:#172b20}.brand-dot {background:#96caff;border:1px solid #111c18}
+.brand-type strong {font-size:1.23rem;letter-spacing:-.065em}
+.brand-type small {font-size:.65rem;color:#8caaa0;letter-spacing:.07em}
+.nav-link {font-size:.88rem;color:#aebfb8}
+.nav-link.current::before {width:7px;height:7px}
+.mode-tag {font-size:.75rem;padding:11px 13px;background:#1e3128;border-color:#4d6553;color:#e0f8c0}
+/* Above the fold: product promise, objective, primary action. */
+.hero {position:relative;grid-template-columns:minmax(0,1.07fr) minmax(355px,.83fr);gap:clamp(22px,3.5vw,58px);padding:45px 0 31px;min-height:0;align-items:center}
+.hero-content {position:relative;z-index:1;padding:8px 0}
+.hero-eyebrow-pill {display:inline-flex;align-items:center;gap:9px;border:1px solid #506954;background:#1a302a;border-radius:999px;padding:8px 12px;color:#d0f4ad;font:750 .72rem var(--font-code);letter-spacing:.05em;margin-bottom:19px}
+.hero-eyebrow-spark {color:var(--lime);font-size:.9rem}.hero-eyebrow-index {color:#8db8a3;font-weight:550}
+.hero .kicker {display:none}
+.hero h1 {font-size:clamp(3.55rem,5.45vw,5.6rem);line-height:1.13;letter-spacing:-.085em;font-weight:890;margin:0 0 19px;max-width:740px}
+.hero h1 span {color:var(--lime);text-shadow:0 13px 55px #b9f67420}
+.hero-lead {font-size:1rem;line-height:1.87;color:#bdcfc9;max-width:650px}
+.hero-actions {margin-top:25px;gap:10px}
+.cta-primary,.cta-secondary {min-height:52px;border-radius:13px;font-size:.92rem;padding:14px 19px;gap:26px}
+.cta-primary {box-shadow:0 12px 30px #aaf35d1c}
+.cta-secondary {color:#e6f1e9;border-color:#4a635b}
+.hero-playbook {display:flex;flex-wrap:wrap;gap:8px;margin-top:20px}
+.hero-playbook span {display:inline-flex;align-items:center;gap:8px;color:#b9d1c5;background:#192722;border:1px solid #354b42;border-radius:10px;padding:9px 11px;font-size:.72rem;font-weight:640}
+.hero-playbook b {font:800 .68rem var(--font-code);color:var(--lime)}
+.hero-footnote {font-size:.72rem;color:#94aaa0;margin-top:16px}
+.quest-card {min-height:0;padding:23px 24px 18px;border:1px solid #608875;border-radius:25px;background:radial-gradient(ellipse 70% 95% at 50% 28%,#2c5948 0%,transparent 75%),linear-gradient(138deg,#142e29,#10201e);box-shadow:0 28px 65px #0007,0 0 0 1px #c5ef8010 inset}
+.quest-card::before {background-size:32px 32px;opacity:.9}
+.quest-card::after {content:'✦';color:#bfe9af;font-size:19px;right:18px;top:10px}
+.quest-overline {font-size:.72rem;color:#d0f4d7}
+.quest-round {font-size:.66rem;color:#d0e3ce}
+.quest-visual {margin:15px auto 14px;gap:11px}
+.target-emblem {width:107px;height:105px;border:1px solid #87bc9c70;border-radius:24px;box-shadow:0 16px 30px #0004;transform:rotate(-9deg);background:linear-gradient(145deg,#3e6f5a,#18372f)}
+.target-right {transform:rotate(9deg);background:linear-gradient(145deg,#51675a,#243a31)}
+.target-icon {font-size:2.5rem;color:#f0ffe1}
+.target-emblem small {color:#d1eccd}
+.versus-mark {font-size:.81rem;color:var(--lime)}
+.quest-caption {margin:0 0 15px}.quest-caption h2 {font-size:1.57rem;margin:4px 0 4px;color:#f1ffe8}
+.quest-caption p {font-size:.8rem;color:#b6d2c3}
+.quest-prefix {font-size:.64rem;color:#a8c7a7}
+.quest-intel {margin:12px 0 11px;background:#10292191;border-color:#74a48655;padding:10px 13px;border-radius:12px}
+.quest-intel small {font-size:.64rem;color:#c1debd}
+.quest-intel strong {font-size:1.3rem}
+.quest-intel-mid {font-size:.5rem;color:#96b8aa}
+.quest-steps {padding-top:11px;gap:3px}
+.quest-steps span {color:#9eafa7;font-size:.66rem}.quest-steps .step-current {color:#c9f77b}
+/* Keep stats useful without creating a second billboard. */
+.model-summary {min-height:92px;grid-template-columns:175px 1fr;background:#14221f;border-color:#385149;border-radius:17px}
+.summary-label {padding:16px 20px;font-size:.77rem;gap:6px}
+.summary-label small {font-size:.76rem}
+.summary-metrics {min-height:92px}
+.summary-metric {padding:13px 19px}
+.summary-metric small {font-size:.67rem;margin-bottom:3px;color:#a9bdb6}
+.summary-metric strong {font-size:clamp(1.65rem,2.1vw,2rem);color:#f7fff3}
+.metric-unit {font-size:.56rem;color:#a0afa7}
+/* The immediate next action is visually distinct from the batch status. */
+.game-guide {margin:13px 0 0;padding:14px 20px;border-radius:17px;background:linear-gradient(110deg,#1c3e36,#1a332f);border-color:#537a62;gap:20px}
+.game-guide-copy .guide-label {font-size:.65rem}
+.game-guide-copy strong {font-size:1.17rem;margin:4px 0 3px}
+.game-guide-copy p {font-size:.8rem;color:#c3ddcd}
+.guide-action {min-height:43px;margin-top:9px;font-size:.83rem;padding:9px 12px}
+.guide-step {min-height:51px;display:flex;flex-direction:column;align-items:center;justify-content:center;padding:8px;font-size:.77rem}
+.guide-step i {margin:0 0 3px;font-size:.66rem}
+.batch-rail {margin:11px 0 12px;border-radius:16px;padding:14px 20px 13px;background:#14251f;border-color:#375349}
+.batch-rail-head {gap:13px}
+.batch-eyebrow {font-size:.62rem}
+.batch-state-copy h2 {font-size:1.15rem;margin:4px 0 2px}
+.batch-state-copy p {font-size:.8rem;line-height:1.45}
+.batch-state-copy time {font-size:.76rem;margin-top:5px}
+.batch-figures div {padding:7px 4px}
+.batch-figures strong {font-size:1.12rem}
+.batch-figures small {font-size:.68rem}
+.batch-timeline {margin-top:10px}
+.batch-timeline li {min-height:35px;font-size:.75rem}
+.alert-wrap {padding:8px 0 17px}
+.app-alert {font-size:.81rem;min-height:42px;background:#11221e}
+/* A lighter editorial workspace is the actual game board. */
+.workspace {gap:17px;grid-template-columns:minmax(0,1fr) 345px}
+.explorer {color:var(--game-ink);background:var(--game-cream);border:1px solid #e9eee6;border-radius:26px;padding:29px 28px 23px;box-shadow:0 25px 68px #0002}
+.explorer .section-overline {color:#608376;font-size:.71rem;font-weight:850}
+.explorer .section-overline span {color:#33775b}
+.explorer .section-head h2 {color:#172823;font-size:clamp(1.85rem,2.4vw,2.4rem);letter-spacing:-.06em;line-height:1.23}
+.explorer .section-head h2 em {color:#2e895d}
+.explorer .section-head p {color:#526e62;font-size:.9rem;line-height:1.65}
+.explorer .explorer-counter {background:#e4eee5;color:#38634d;border-color:#cbded0;font-size:.73rem;padding:9px 12px}
+.explorer .filter-panel {background:#ffffff;border:1px solid #d9e2da;border-radius:16px;padding:11px;box-shadow:0 8px 25px #1639220b}
+.explorer .search-field input {background:#f4f6f2;color:#1c3127;min-height:48px;font-size:.9rem}
+.explorer .search-field input::placeholder {color:#698276}
+.explorer .field-icon {color:#3a8062}
+.explorer .select-field select {background:#f4f6f2;color:#2c4a3b;border:1px solid #d6dfd7;height:48px;font-size:.84rem}
+.explorer .filter-toggle {color:#354e3f;font-size:.81rem}
+.explorer .toggle-track {background:#dbe5dc;border-color:#abc2b3}
+.explorer .toggle-track::before {background:#7c9c8b}
+.explorer .filter-submit {background:#193d31;color:#f3ffe8;min-height:48px;font-size:.84rem}
+.explorer .filter-submit:hover {background:#2f7355}
+.explorer .explorer-help {color:#557166;font-size:.84rem;line-height:1.6}
+.explorer .strategy-picker {background:linear-gradient(105deg,#e0f2df,#e7f2e8);border-color:#bfddc6;box-shadow:none;border-radius:15px;padding:14px 16px}
+.explorer .strategy-picker-label strong {color:#1c3a2a;font-size:.92rem}
+.explorer .strategy-picker-label small {color:#5c7967;font-size:.79rem}
+.explorer .strategy-decor {color:#2e8759;font-size:1.35rem}
+.explorer .strategy-btn {background:#ffffff;color:#264e39;border:1px solid #b6d2bd;font-size:.78rem;min-height:43px}
+.explorer .strategy-btn:hover {color:#173d2e;background:#d4eedc;border-color:#4ca579}
+.explorer .strategy-btn[aria-pressed="true"] {background:#173d2e;color:#effff1;border-color:#173d2e}
+.explorer .explorer-tools {color:#647e70;font-size:.85rem;padding-top:18px}
+.explorer .view-indicator {color:#2b845c}
+.explorer .page-btn {color:#335d47;border-color:#c5d6c8;background:#ffffff;font-size:.8rem}
+.explorer .page-btn:hover:not(:disabled) {color:#165e41;border-color:#3c9469}
+.explorer .rights-banner {color:#587166;font-size:.77rem}
+.explorer .rights-banner span {color:#277a54}
+/* Dataset images form a shop-like gallery: clear contrast, large imagery, single action. */
+.sample-grid {gap:13px}
+.sample-card {background:#fff;border:1px solid #d8e4d9;border-radius:16px;box-shadow:0 6px 16px #132f1712;transition:transform .18s,box-shadow .18s,border-color .18s}
+.sample-card:hover {transform:translateY(-4px);border-color:#61aa79;box-shadow:0 18px 28px #132f1722}
+.sample-card.is-selected {border-color:#267d50;box-shadow:0 0 0 2px #8fd9a7,0 12px 24px #1c81421e}
+.sample-art {height:170px;border-bottom:1px solid #e1e5df;background:radial-gradient(circle at 55% 32%,#d7eed7,#abd5c0)}
+.sample-art::before {opacity:.15;background:repeating-linear-gradient(90deg,transparent 0 22px,#386b69 22px 23px),repeating-linear-gradient(0deg,transparent 0 22px,#386b69 22px 23px)}
+.sample-art::after {width:110px;height:110px;border-color:#ffffff90}
+.sample-art.art-0,.sample-art.art-8 {background:linear-gradient(135deg,#c6e4f7,#91c0df)}
+.sample-art.art-1,.sample-art.art-9 {background:linear-gradient(135deg,#fae9c6,#e1c6a0)}
+.sample-art.art-2,.sample-art.art-6 {background:linear-gradient(135deg,#dccff4,#b5bee8)}
+.sample-art.art-3,.sample-art.art-5 {background:linear-gradient(135deg,#e3edb5,#a8d8a8)}
+.sample-art.art-4,.sample-art.art-7 {background:linear-gradient(135deg,#ffe4cc,#ecc19f)}
+.art-code {color:#28524fa6;font-weight:750;font-size:.65rem}
+.art-glyph {color:#1e5842;text-shadow:none;font-size:3.55rem;letter-spacing:-.13em}
+.art-caption {background:#ffffffed;border-color:#cfdfce;color:#426654;border-radius:7px;font-size:.64rem;padding:5px 7px}
+.sample-art img {background:#e6e9df;image-rendering:pixelated}
+.sample-card-content {padding:15px 15px 16px}
+.sample-id {font-size:.73rem;color:#67847a}
+.sample-label {color:#192e25;font-size:1.1rem;margin:9px 0 3px}
+.sample-pred {color:#596d62;font-size:.84rem;line-height:1.5}
+.sample-loss {color:#143d29;font-size:.89rem}
+.sample-loss small {color:#708778;font-size:.68rem}
+.sample-votes {color:#347c55;font-size:.79rem;font-weight:740}
+.error-tag {background:#fff0e9;color:#a34b28;font-size:.72rem}
+.ok-tag {background:#e8f7ea;color:#296f48;font-size:.72rem}
+.select-button {background:#193e32;border:1px solid #193e32;color:#fffef7;border-radius:10px;min-height:46px;font-size:.82rem;letter-spacing:-.015em}
+.select-button:hover:not(:disabled) {background:#2d7756}
+.select-button[aria-pressed="true"] {background:var(--lime);border-color:#8ac45a;color:#193b27}
+.explorer .empty-state {color:#264437}
+.explorer .empty-state p {color:#5a7567}
+.explorer .explorer-footer {color:#698376}
+.explorer .bottom-pagination {color:#547565}
+/* Selection panel is the dark anchor beside the bright marketplace. */
+.vote-panel {border-radius:24px;border-color:#658767;background:linear-gradient(160deg,#213a2d,#14291f 45%,#0f211b);box-shadow:0 22px 55px #0004;padding:26px 23px}
+.vote-panel h2 {font-size:2.35rem}
+.vote-panel .section-overline {color:#c4e5b8;font-size:.7rem}
+.vote-panel .ballot-intro {font-size:.87rem;line-height:1.65;color:#c2d8c9}
+.vote-panel .round-phase {font-size:.85rem}
+.vote-panel .round-countdown {font-size:.9rem;font-weight:720;color:#ebf7d7}
+.vote-panel .save-explainer {font-size:.82rem;color:#bdd4c6}
+.vote-progress-head {font-size:.74rem}.vote-progress-head strong {font-size:1.12rem}
+.vote-panel .pick-empty {font-size:.84rem;line-height:1.6;color:#bbd1bf}
+.vote-panel .pick-chip {font-size:.84rem;min-height:41px}
+.vote-panel .id-form label,.vote-panel .reason-label {font-size:.82rem}
+.vote-panel .vote-main-button {border-radius:11px;min-height:49px;font-size:.88rem}
+.vote-panel .refresh-button {font-size:.82rem}
+.vote-panel .ballot-legal p {font-size:.77rem}
+.prediction-zone {border-radius:17px;margin-left:-3px;margin-right:-3px;border-color:#d6ad72;padding:20px 16px 16px;background:radial-gradient(ellipse 70% 55% at 100% 0%,#ffce8345,transparent 75%),linear-gradient(135deg,#403024,#252b22)}
+.prediction-heading h3 {font-size:1.75rem}
+.prediction-heading p,.forecast-facts {font-size:.81rem}
+.forecast-form label {font-size:.86rem}
+.forecast-numeric output {font-size:3rem}
+.forecast-save {border-radius:10px;font-size:.87rem;min-height:50px}
+/* Results should feel like a reveal, not like an error log. */
+.results-section {border-radius:24px;border-color:#334f48;background:linear-gradient(155deg,#142927,#101d23);margin-top:25px;padding:27px}
+.results-section .section-head h2 {font-size:clamp(2rem,3vw,2.7rem)}
+.results-section .section-head p {font-size:.89rem}
+.results-surface {border-radius:15px;border-color:#3e5f50}
+.result-overview {border-radius:16px}
+.result-overview h3 {font-size:clamp(1.85rem,3vw,2.6rem)}
+.result-overview p {font-size:.83rem}
+.result-scorecard {border-radius:14px}
+.result-scorecard strong {font-size:clamp(1.7rem,2.5vw,2.5rem)}
+.result-experiment-row {font-size:.86rem}
+.personal-participation:not([hidden]) {border-radius:16px}
+.how-it-works {margin:50px 0 65px}
+.how-item strong {font-size:1.05rem}
+.how-item p {font-size:.83rem;line-height:1.55}
+.site-footer small {font-size:.7rem}
+/* Accessibility and device-specific density */
+:focus-visible {outline:3px solid #84b8ff!important;outline-offset:3px}
+.explorer :focus-visible {outline-color:#2a7cbd!important}
+@media(max-width:1260px) {
+  .hero {gap:25px}
+  .hero h1 {font-size:clamp(3.1rem,5.1vw,4.4rem)}
+  .workspace {grid-template-columns:minmax(0,1fr) 325px}
+  .explorer {padding:23px 20px}
+}
+@media(max-width:850px) {
+  .app-shell {width:min(100% - 30px,740px)}
+  .hero {grid-template-columns:1fr;gap:20px;padding:30px 0 23px}
+  .hero h1 {font-size:clamp(3.05rem,7vw,4rem)}
+  .hero-playbook {gap:6px}
+  .quest-card {width:100%;max-width:none}
+  .quest-visual {margin:10px auto 12px}
+  .summary-label {padding:10px 16px}
+  .summary-metric {padding:10px 13px}
+  .model-summary {min-height:0}
+  .game-guide {padding:13px 16px}
+  .workspace {grid-template-columns:1fr;gap:17px}
+  .sample-grid {grid-template-columns:repeat(3,minmax(0,1fr))}
+  .vote-panel {position:static}
+  .batch-rail {padding:13px 15px}
+}
+@media(max-width:620px) {
+  .topbar {height:66px}
+  .app-shell {width:calc(100% - 24px)}
+  .brand-emblem {width:37px;height:37px;border-radius:10px}
+  .brand-type strong {font-size:1rem}
+  .brand-type small {font-size:.52rem}
+  .mode-tag {font-size:.68rem;padding:8px 9px}
+  .hero {padding:24px 0 18px;gap:16px}
+  .hero-content {padding:0}
+  .hero-eyebrow-pill {margin-bottom:12px;font-size:.61rem;padding:7px 10px}
+  .hero-eyebrow-index {display:none}
+  .hero h1 {font-size:clamp(2.55rem,9.9vw,3.45rem);margin-bottom:12px;letter-spacing:-.074em}
+  .hero-lead {font-size:.9rem;line-height:1.65}
+  .hero-actions {margin-top:17px}
+  .cta-primary,.cta-secondary {min-height:48px;font-size:.78rem;padding:12px 10px}
+  .hero-playbook {display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:5px;margin-top:15px}
+  .hero-playbook span {padding:8px 5px;gap:3px;flex-direction:column;justify-content:center;text-align:center;font-size:.64rem;line-height:1.25;min-height:51px}
+  .hero-playbook b {font-size:.63rem}
+  .hero-footnote {margin-top:11px;font-size:.69rem}
+  .quest-card {padding:15px 16px;border-radius:18px;min-height:0}
+  .quest-overline {font-size:.64rem}
+  .quest-visual {margin:8px auto 7px}
+  .target-emblem {width:74px;height:69px;border-radius:15px}
+  .target-icon {font-size:1.7rem}
+  .target-emblem small {font-size:.48rem}
+  .quest-caption {margin-bottom:10px}
+  .quest-caption h2 {font-size:1.25rem}
+  .quest-caption p {font-size:.71rem}
+  .quest-intel {margin:7px 0 0;padding:7px 8px}
+  .quest-intel strong {font-size:1.06rem}
+  .quest-intel small {font-size:.54rem}
+  .quest-intel-mid {display:none}
+  .quest-steps {display:none}
+  .model-summary {border-radius:12px}
+  .summary-label {padding:9px 12px;font-size:.7rem}
+  .summary-label small {font-size:.7rem}
+  .summary-metrics {grid-template-columns:repeat(4,minmax(0,1fr));min-height:0}
+  .summary-metric {padding:10px 7px;border-bottom:0;text-align:center}
+  .summary-metric:nth-child(2){border-right:1px solid #2b3935}
+  .summary-metric:nth-child(3){border-right:1px solid #2b3935}
+  .summary-metric small {font-size:.55rem;letter-spacing:0;line-height:1.25;min-height:25px}
+  .summary-metric strong {font-size:1.24rem;overflow-wrap:anywhere}
+  .summary-metric div {justify-content:center}
+  .metric-unit {display:none}
+  .game-guide {margin:9px 0 0;padding:12px;border-radius:13px;gap:10px}
+  .game-guide-copy strong {font-size:1.05rem;margin:3px 0}
+  .game-guide-copy p {font-size:.75rem}
+  .guide-action {min-height:42px;margin-top:7px}
+  .game-guide-steps {gap:4px}
+  .guide-step {font-size:.65rem;min-height:38px;padding:5px 3px}
+  .guide-step i {font-size:.58rem;margin:0}
+  .batch-rail {margin:9px 0 8px;padding:12px;border-radius:12px}
+  .batch-rail-head {gap:8px}
+  .batch-state-copy h2 {font-size:1.03rem}
+  .batch-state-copy p {font-size:.75rem}
+  .batch-state-copy time {font-size:.68rem}
+  .batch-figures div {padding:6px 1px}
+  .batch-figures strong {font-size:1rem}
+  .batch-figures small {font-size:.64rem}
+  .batch-timeline {gap:3px;margin-top:8px}
+  .batch-timeline li {min-height:43px;padding:5px 1px;font-size:.64rem}
+  .alert-wrap {padding:7px 0 12px}
+  .app-alert {font-size:.74rem;padding:9px 11px}
+  .workspace {gap:13px}
+  .explorer {padding:18px 13px;border-radius:16px}
+  .explorer .section-head h2 {font-size:1.82rem}
+  .explorer .section-head p {font-size:.82rem}
+  .explorer .explorer-counter {font-size:.7rem}
+  .explorer .filter-panel {padding:8px}
+  .explorer .filter-submit {width:100%}
+  .explorer .strategy-picker {padding:11px 9px}
+  .explorer .strategy-actions {grid-template-columns:repeat(2,minmax(0,1fr))}
+  .sample-grid {grid-template-columns:repeat(2,minmax(0,1fr));gap:8px}
+  .sample-art {height:138px}
+  .art-glyph {font-size:2.45rem}
+  .sample-card-content {padding:10px}
+  .sample-id {font-size:.7rem}
+  .sample-label {font-size:1.05rem}
+  .sample-pred {font-size:.73rem;min-height:2.2em}
+  .sample-loss {font-size:.83rem}
+  .sample-votes {font-size:.73rem}
+  .select-button {font-size:.76rem;min-height:46px;padding:7px 4px}
+  .vote-panel {padding:20px 17px;border-radius:18px}
+  .vote-panel h2 {font-size:2rem}
+  .results-section {padding:17px;border-radius:17px}
+  .results-section .section-head h2 {font-size:1.9rem}
+  .result-overview h3 {font-size:1.8rem}
+}
+@media(max-width:365px) {
+  .hero h1 {font-size:2.34rem}
+  .hero-playbook span {font-size:.57rem}
+  .sample-grid {grid-template-columns:1fr}
+}
+@media(prefers-reduced-motion:reduce) {
+  .sample-card,.cta-primary,.cta-secondary,.sample-card:hover {transition:none;transform:none}
+  html {scroll-behavior:auto}
+}
+
+/* Mobile: each metric must remain legible; never force a five-character loss into 33px. */
+@media(max-width:620px) {
+  .summary-metrics {grid-template-columns:repeat(2,minmax(0,1fr));}
+  .summary-metric {padding:10px 13px;text-align:left;}
+  .summary-metric:nth-child(odd) {border-right:1px solid #2b3935;}
+  .summary-metric:nth-child(even) {border-right:0;}
+  .summary-metric:nth-child(-n+2) {border-bottom:1px solid #2b3935;}
+  .summary-metric small {font-size:.63rem;min-height:0;letter-spacing:.025em;line-height:1.5;}
+  .summary-metric strong {font-size:1.55rem;overflow-wrap:normal;white-space:nowrap;}
+  .summary-metric div {justify-content:flex-start;white-space:nowrap;}
+}
+/* Tablet landscape keeps the mission beside the headline instead of wasting a full row. */
+@media(min-width:621px) and (max-width:850px) {
+  .hero {grid-template-columns:minmax(0,1fr) minmax(270px,.78fr);align-items:center;gap:16px;padding:24px 0 20px;}
+  .hero h1 {font-size:clamp(2.25rem,5.3vw,3.15rem);line-height:1.16;}
+  .hero-lead {font-size:.83rem;line-height:1.65;}
+  .hero-actions {margin-top:17px;}
+  .cta-primary,.cta-secondary {padding:10px 11px;min-height:48px;font-size:.75rem;gap:9px;}
+  .hero-playbook {margin-top:12px;}
+  .hero-playbook span {font-size:.62rem;padding:7px 8px;}
+  .hero-footnote {font-size:.65rem;margin-top:10px;}
+  .quest-card {padding:15px 14px;}
+  .quest-overline {font-size:.59rem;gap:5px;}
+  .quest-visual {gap:4px;margin:11px auto 9px;}
+  .target-emblem {width:74px;height:75px;border-radius:15px;}
+  .target-icon {font-size:1.75rem;}
+  .versus-line {width:9px;}
+  .quest-caption {margin-bottom:8px;}
+  .quest-caption h2 {font-size:1.18rem;}
+  .quest-caption p {font-size:.7rem;}
+  .quest-intel {padding:7px 9px;margin:7px 0;}
+  .quest-intel small {font-size:.55rem;}
+  .quest-intel strong {font-size:1.08rem;}
+  .quest-intel-mid {display:none;}
+  .quest-steps {padding-top:8px;}
+  .quest-steps span {font-size:.56rem;}
+  .hero-eyebrow-pill {font-size:.57rem;padding:7px 8px;margin-bottom:12px;}
+}
+@media(max-width:620px) {
+  .model-summary {grid-template-columns:1fr;}
+  .summary-label {padding:10px 14px;flex-direction:row;justify-content:flex-start;gap:9px;border-right:0;border-bottom:1px solid #395148;}
+  .summary-label small {font-size:.72rem;}
+  .summary-metrics {grid-template-columns:repeat(2,minmax(0,1fr));}
+  .summary-metric {padding:12px 15px;}
+  .summary-metric strong {font-size:1.6rem;}
+}

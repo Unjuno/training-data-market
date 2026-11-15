@@ -290,6 +290,8 @@ def make_app(store:GameStore,state_root:Path):
     def live_css():return FileResponse(Path(__file__).resolve().parent.parent/'live.css',media_type='text/css')
     @app.get('/game.css')
     def game_css():return FileResponse(Path(__file__).resolve().parent.parent/'game.css',media_type='text/css')
+    @app.get('/experience.css')
+    def experience_css():return FileResponse(Path(__file__).resolve().parent.parent/'experience.css',media_type='text/css')
     @app.get('/app.js')
     def demo_js():return FileResponse(Path(__file__).resolve().parent.parent/'app.js',media_type='text/javascript')
     @app.get('/src/{script}')

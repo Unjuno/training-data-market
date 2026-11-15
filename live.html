@@ -9,6 +9,7 @@
   <link rel="stylesheet" href="styles.css">
   <link rel="stylesheet" href="live.css">
   <link rel="stylesheet" href="game.css">
+  <link rel="stylesheet" href="experience.css">
   <script type="module" src="live.js"></script>
 </head>
 <body class="arena" data-mode="live">
@@ -27,7 +28,7 @@
         <a href="#how-it-works" class="nav-link">しくみ</a>
       </nav>
       <div class="header-actions">
-        <span class="version-label">BETA / V1.2</span>
+        <span class="version-label">GAME / V1.4</span>
         <span class="mode-tag" id="mode-badge"><span class="status-led" aria-hidden="true"></span> 接続確認中</span>
       </div>
     </header>
@@ -35,11 +36,17 @@
     <main id="main">
       <section class="hero" aria-labelledby="headline">
         <div class="hero-content">
+          <div class="hero-eyebrow-pill"><span class="hero-eyebrow-spark" aria-hidden="true">✦</span> AI TRAINING ARENA <span class="hero-eyebrow-index">/ COMMUNITY QUEST</span></div>
           <p class="kicker"><span class="kicker-symbol">◆</span> HUMAN-IN-THE-LOOP EXPERIMENT <span class="kicker-index">001 — 010</span></p>
-          <h1 id="headline">次の一枚が、<br><span>AIの未来を変える。</span></h1>
-          <p class="hero-lead">AIの弱点を見つけよう。学習に効くと思う画像を選び、<br class="desktop-break">みんなの推薦でAIの次の学習を決める。結果は実験で検証する。</p>
-          <div class="hero-actions"><a class="cta-primary" id="hero-primary-action" href="#explore">学習データを探す <span aria-hidden="true">↗</span></a><a class="cta-secondary" href="#how-it-works">ゲームのしくみ <span aria-hidden="true">↘</span></a></div>
-          <div class="hero-footnote"><span class="hero-footline"></span> 画像選択 → 集計 → 2モデルの比較実験。金銭の賭けはありません。</div>
+          <h1 id="headline">AIの弱点を、<br><span>攻略しよう。</span></h1>
+          <p class="hero-lead">AIの間違いを見つけて、学習に効く画像を選ぼう。<br class="desktop-break">みんなの推薦を集計し、実験でAIが成長したか確かめる。</p>
+          <div class="hero-actions"><a class="cta-primary" id="hero-primary-action" href="#explore">今すぐ画像を選ぶ <span aria-hidden="true">↗</span></a><a class="cta-secondary" href="#how-it-works">ゲームのしくみ <span aria-hidden="true">↘</span></a></div>
+          <div class="hero-playbook" aria-label="ゲームの流れ">
+            <span><b>01</b> 学習画像を推薦</span>
+            <span><b>02</b> 勝敗を予測</span>
+            <span><b>03</b> 結果を確かめる</span>
+          </div>
+          <div class="hero-footnote"><span class="hero-footline"></span> あなたの投票を集計し、締切後にまとめて学習します。金銭のベットはありません。</div>
         </div>
         <div class="quest-card" aria-label="今回のクエスト">
           <div class="quest-glow" aria-hidden="true"></div>
