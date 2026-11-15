@@ -2,7 +2,6 @@
 import asyncio
 from pathlib import Path
 import re
-from playwright.async_api import async_playwright
 
 ROOT = Path(__file__).resolve().parents[1]
 
@@ -64,6 +63,7 @@ async def page_setup(browser,width):
     return page
 
 async def main():
+    from playwright.async_api import async_playwright
     async with async_playwright() as p:
         browser=await p.chromium.launch(executable_path='/usr/bin/chromium',headless=True,args=['--no-sandbox'])
         page=await page_setup(browser,1440)
