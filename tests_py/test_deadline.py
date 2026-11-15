@@ -35,14 +35,15 @@ def test_worker_uses_persisted_deadline_not_runtime_option(tmp_path, monkeypatch
     monkeypatch.setattr('backend.worker.run_locked_round', lambda *args: 'trained')
     assert poll_once(store,tmp_path,tmp_path,round_seconds=3,now=due-1) == 'OPEN'
     assert poll_once(store,tmp_path,tmp_path,round_seconds=9999,now=due+1) == 'trained'
-    assert store.get_round('r1')['status'] == 'LOCKED'
+    assert store.get_round('r1')['status'] == 'TRAINING'
 
 
 def test_next_round_keeps_same_duration(tmp_path):
     store=make_store(tmp_path, duration=123)
     before=store.get_round('r1')
     store.lock_round('r1')
-    store.finalize_round('r1','{"winner":"community"}', 'r2', 'cp1',(1,9),23,[])
+    token=store.claim_round('r1')
+    store.finalize_round('r1','{"winner":"community"}', 'r2', 'cp1',(1,9),23,[],claim_token=token)
     following=store.get_round('r2')
     assert abs((following['closes_at']-following['opened_at']) - 123) < 0.001
     assert abs((before['closes_at']-before['opened_at']) - 123) < 0.001

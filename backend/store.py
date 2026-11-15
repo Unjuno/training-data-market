@@ -4,6 +4,7 @@ from __future__ import annotations
 import sqlite3
 import os
 import time
+import secrets
 from contextlib import contextmanager
 from pathlib import Path
 
@@ -43,7 +44,8 @@ class GameStore:
                   id TEXT PRIMARY KEY, checkpoint TEXT NOT NULL, target_a INTEGER NOT NULL,
                   target_b INTEGER NOT NULL, seed INTEGER NOT NULL, status TEXT NOT NULL,
                   opened_at REAL NOT NULL, closes_at REAL, locked_at REAL, finished_at REAL,
-                  result_json TEXT);
+                  result_json TEXT, worker_token TEXT, worker_started_at REAL,
+                  worker_attempts INTEGER NOT NULL DEFAULT 0);
                 CREATE TABLE IF NOT EXISTS picks (
                   round_id TEXT NOT NULL REFERENCES rounds(id),
                   user_id TEXT NOT NULL, sample_id INTEGER NOT NULL REFERENCES samples(id),
@@ -68,6 +70,13 @@ class GameStore:
             columns={row['name'] for row in conn.execute('PRAGMA table_info(rounds)')}
             if 'closes_at' not in columns:
                 conn.execute('ALTER TABLE rounds ADD COLUMN closes_at REAL')
+            for field, ddl in (
+                ('worker_token', 'TEXT'),
+                ('worker_started_at', 'REAL'),
+                ('worker_attempts', 'INTEGER NOT NULL DEFAULT 0'),
+            ):
+                if field not in columns:
+                    conn.execute(f'ALTER TABLE rounds ADD COLUMN {field} {ddl}')
             fallback=self._round_seconds(None)
             conn.execute('UPDATE rounds SET closes_at=opened_at+? WHERE closes_at IS NULL', (fallback,))
 
@@ -217,6 +226,50 @@ class GameStore:
             if r is None:raise GameError('not an eligible image',404)
             return dict(r)
 
+    def vote_summary(self,round_id:str)->dict:
+        """Aggregated public counts; no identities or forecast probabilities leak."""
+        with self._db() as conn:
+            round_data=conn.execute('SELECT status,closes_at FROM rounds WHERE id=?', (round_id,)).fetchone()
+            if round_data is None:raise GameError('round not found',404)
+            count=conn.execute('SELECT count(*),count(DISTINCT user_id) FROM picks WHERE round_id=?',
+                               (round_id,)).fetchone()
+            predictions=conn.execute('SELECT count(*) FROM forecasts WHERE round_id=?',
+                                     (round_id,)).fetchone()[0]
+            return {'vote_count':int(count[0]), 'voter_count':int(count[1]),
+                    'forecast_count':int(predictions),
+                    'frozen':round_data['status']!='OPEN' or time.time()>=round_data['closes_at']}
+
+    def claim_round(self,round_id:str)->str|None:
+        """Only one worker can move a locked batch into TRAINING.
+
+        Claims do not expire automatically: after a crash, an operator must
+        verify the old process is stopped before recovering this round.
+        """
+        with self._db(True) as conn:
+            row=conn.execute('SELECT status FROM rounds WHERE id=?',(round_id,)).fetchone()
+            if row is None:raise GameError('round not found',404)
+            if row['status']!='LOCKED':return None
+            token=secrets.token_hex(24)
+            conn.execute('UPDATE rounds SET status=?,worker_token=?,worker_started_at=?,worker_attempts=worker_attempts+1 WHERE id=?',
+                         ('TRAINING',token,time.time(),round_id))
+            conn.execute('INSERT INTO events(round_id,kind,details,at) VALUES(?,?,?,?)',
+                         (round_id,'ROUND_CLAIMED','{}',time.time()))
+            return token
+
+    def recover_training_round(self,round_id:str,expected_token:str):
+        """Manual recovery ONLY after confirming the previous process is dead."""
+        if not expected_token:
+            raise GameError('expected owner token is required',422)
+        with self._db(True) as conn:
+            row=conn.execute('SELECT status,worker_token FROM rounds WHERE id=?',(round_id,)).fetchone()
+            if row is None:raise GameError('round not found',404)
+            if row['status']!='TRAINING' or row['worker_token']!=expected_token:
+                raise GameError('worker claim no longer matches',409)
+            conn.execute('UPDATE rounds SET status=?,worker_token=NULL,worker_started_at=NULL WHERE id=?',
+                         ('LOCKED',round_id))
+            conn.execute('INSERT INTO events(round_id,kind,details,at) VALUES(?,?,?,?)',
+                         (round_id,'ROUND_RECOVERED','{}',time.time()))
+
     def lock_round(self,round_id:str):
         with self._db(True) as conn:
             row=conn.execute('SELECT status FROM rounds WHERE id=?',(round_id,)).fetchone()
@@ -227,25 +280,23 @@ class GameStore:
                          (round_id,'ROUND_LOCKED','{}',time.time()))
 
     def publish_result(self,round_id:str,result_json:str):
-        with self._db(True) as conn:
-            r=conn.execute('SELECT status FROM rounds WHERE id=?',(round_id,)).fetchone()
-            if r is None or r['status']!='LOCKED':raise GameError('round not locked or already published',409)
-            conn.execute('UPDATE rounds SET status=?,result_json=?,finished_at=? WHERE id=?',
-                         ('PUBLISHED',result_json,time.time(),round_id))
-            conn.execute('INSERT INTO events(round_id,kind,details,at) VALUES(?,?,?,?)',
-                         (round_id,'ROUND_PUBLISHED','{}',time.time()))
+        """Direct publication is disabled: publish must include atomic promotion.
+
+        Call finalize_round with the unique training owner token instead.
+        """
+        raise GameError('direct publication is disabled; use finalization with worker claim',409)
 
     def finalize_round(self, round_id:str,result_json:str,next_round_id:str,
                        next_checkpoint:str,next_targets:tuple[int,int],next_seed:int,
-                       consumed_ids:list[int]):
+                       consumed_ids:list[int],claim_token:str):
         """Publish + create next OPEN round in one SQLite transaction.
 
         Only the actually promoted arm's images are removed from availability.
         """
         with self._db(True) as conn:
-            row=conn.execute('SELECT status,opened_at,closes_at FROM rounds WHERE id=?',(round_id,)).fetchone()
-            if row is None or row['status']!='LOCKED':
-                raise GameError('round must be LOCKED to finalize',409)
+            row=conn.execute('SELECT status,worker_token,opened_at,closes_at FROM rounds WHERE id=?',(round_id,)).fetchone()
+            if row is None or row['status']!='TRAINING' or not claim_token or row['worker_token']!=claim_token:
+                raise GameError('round must be TRAINING and owned by this worker to finalize',409)
             duration=self._round_seconds(round(row['closes_at']-row['opened_at']))
             now=time.time()
             conn.execute('UPDATE rounds SET status=?,result_json=?,finished_at=? WHERE id=?',

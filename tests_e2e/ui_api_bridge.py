@@ -52,8 +52,9 @@ async def scenario(app,state):
             await a.locator('#refresh').click()
             await a.wait_for_function('document.querySelector(".sample-votes").textContent.includes("2 票")')
             assert '保存' in await a.locator('#vote-status').inner_text()
-            res=alice_client.post('/v1/admin/rounds/round-0001/lock',headers={'X-Admin-Key':'k'*40})
-            assert res.status_code==200
+            # The user-facing admin API deliberately cannot shorten a timed ballot.
+            # The test harness advances the batch into LOCKED via its private store.
+            GameStore(state/'votes.sqlite3').lock_round('round-0001')
             blocked=alice_client.put(f'/v1/rounds/round-0001/picks/{id}')
             assert blocked.status_code==409
             result=await asyncio.to_thread(ml.run_locked_round,Path('.'),state,'round-0001')

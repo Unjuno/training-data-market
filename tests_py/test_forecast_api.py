@@ -28,7 +28,8 @@ def test_private_forecast_persists_by_browser_and_scored_after_publish(client_pa
     db.lock_round('round-0001')
     assert alice.put('/v1/rounds/round-0001/forecast/me',json={'probability_pct':5}).status_code==409
     result={'has_votes':True,'community':{'target_loss':0.2},'random':{'target_loss':0.3}}
-    db.publish_result('round-0001',json.dumps(result))
+    token=db.claim_round('round-0001')
+    db.finalize_round('round-0001',json.dumps(result),'round-0002','initial',(3,5),6,[],claim_token=token)
     assert alice.get('/v1/game/me').json()['total_points']==96
     assert bob.get('/v1/game/me').json()['total_points']==44
     assert alice.get('/v1/game/me').json()['items'][0]['outcome']=='community'
@@ -47,7 +48,8 @@ def test_results_expose_authoritative_forecast_outcome(client_pair):
     db,alice,_=client_pair
     db.set_pick('round-0001','alice',3)
     db.lock_round('round-0001')
-    db.publish_result('round-0001',json.dumps({'has_votes':True,'community':{'target_loss':0.2},'random':{'target_loss':0.3},'promotion':'rollback'}))
+    token=db.claim_round('round-0001')
+    db.finalize_round('round-0001',json.dumps({'has_votes':True,'community':{'target_loss':0.2},'random':{'target_loss':0.3},'promotion':'rollback'}),'round-0002','initial',(3,5),6,[],claim_token=token)
     r=alice.get('/v1/rounds/round-0001/results')
     assert r.status_code==200
     assert r.json()['results']['forecast_verdict']['outcome']=='community'

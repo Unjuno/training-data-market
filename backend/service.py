@@ -125,7 +125,7 @@ def make_app(store:GameStore,state_root:Path):
     def current_round(response:Response,request:Request):
         issue_session(request,response)
         round_data=store.current_round()
-        if not round_data:return {'mode':'UNINITIALIZED','metrics':None,'round':None,
+        if not round_data:return {'mode':'UNINITIALIZED','metrics':None,'round':None,'vote_summary':None,
                                   'server_time':time.time()}
         stats=_round_artifact(state_root,'metrics',round_data)
         public={'id':round_data['id'],'status':round_data['status'],
@@ -134,6 +134,7 @@ def make_app(store:GameStore,state_root:Path):
                 'closes_at':round_data['closes_at'],'locked_at':round_data['locked_at']}
         return {'mode':('DEMO' if demo else 'LIVE') if stats else 'UNINITIALIZED',
                 'dataset_name':manifest.get('dataset'),'metrics':stats,'round':public,
+                'vote_summary':store.vote_summary(round_data['id']),
                 'server_time':time.time()}
 
     @app.get('/v1/samples')
@@ -249,6 +250,11 @@ def make_app(store:GameStore,state_root:Path):
     @app.post('/v1/admin/rounds/{round_id}/lock')
     def lock_round(round_id:str,request:Request):
         require_admin(request)
+        round_data=store.get_round(round_id)
+        # The web API must never shorten a timed community ballot, even for admin.
+        # The worker performs the closure after the persisted deadline.
+        if round_data['closes_at'] is None or time.time()<round_data['closes_at']:
+            raise GameError('voting deadline has not passed',409)
         store.lock_round(round_id)
         return {'status':'LOCKED','round_id':round_id,
                 'next_action':'run ML worker: python -m backend.ml train-round --round-id '+round_id}
@@ -263,11 +269,13 @@ def make_app(store:GameStore,state_root:Path):
     def styles():return FileResponse(Path(__file__).resolve().parent.parent/'styles.css',media_type='text/css')
     @app.get('/live.css')
     def live_css():return FileResponse(Path(__file__).resolve().parent.parent/'live.css',media_type='text/css')
+    @app.get('/game.css')
+    def game_css():return FileResponse(Path(__file__).resolve().parent.parent/'game.css',media_type='text/css')
     @app.get('/app.js')
     def demo_js():return FileResponse(Path(__file__).resolve().parent.parent/'app.js',media_type='text/javascript')
     @app.get('/src/{script}')
     def browser_src(script:str):
-        permitted={'arena-view.js','deadline.js','demo-data.js','selection.js','draft.js'}
+        permitted={'arena-view.js','deadline.js','round-flow.js','game-view.js','demo-data.js','selection.js','draft.js'}
         if script not in permitted:raise GameError('script not found',404)
         return FileResponse(Path(__file__).resolve().parent.parent/'src'/script,media_type='text/javascript')
     @app.get('/demo.html')

@@ -11,4 +11,4 @@ def test_worker_locks_only_after_deadline(tmp_path,monkeypatch):
     assert poll_once(db,tmp_path,tmp_path,round_seconds=60,now=opened+59)=='OPEN'
     assert db.get_round('r1')['status']=='OPEN'
     assert poll_once(db,tmp_path,tmp_path,round_seconds=60,now=opened+61)=='trained'
-    assert db.get_round('r1')['status']=='LOCKED'
+    assert db.get_round('r1')['status']=='TRAINING'

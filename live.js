@@ -1,9 +1,10 @@
 import {CLASS_NAMES,CLASS_KEYS,$,renderPicks,setSystemMessage,createSampleCard,updateQuest,setMetric,renderResults,setupMobileVoteLink} from './src/arena-view.js';
 import {deadlineState} from './src/deadline.js';
+import {batchPhase} from './src/round-flow.js';
 import {questIntel,progressState,scoreSummary,forecastHint} from './src/game-view.js';
 let current=null;let datasetName=null;let picks=new Set();let page=1,total=0;let busy=false;let requestVersion=0;
 let searchDebounce=null;let noteDirty=false;let serverClockOffsetMs=0;let lastEditable=false;let autoRefreshing=false;
-let forecastPct=null;let forecastDirty=false;let forecastBusy=false;let lastPublished=false;
+let forecastPct=null;let forecastDirty=false;let forecastBusy=false;let lastPublished=false;let voteSummary=null;
 for(let i=0;i<CLASS_NAMES.length;i++){
   const option=document.createElement('option');option.value=String(i);option.textContent=CLASS_NAMES[i];$('label-filter').append(option);
 }
@@ -71,6 +72,33 @@ function applyStrategy(kind){
   for(const button of document.querySelectorAll('[data-strategy]'))button.setAttribute('aria-pressed',String(button.dataset.strategy===kind));
   clearTimeout(searchDebounce);page=1;refreshSamples();
 }
+function renderBatchState(){
+  const state=batchPhase(current,Date.now()+serverClockOffsetMs);
+  $('batch-rail').dataset.stage=state.id;
+  $('batch-stage').textContent=state.title;
+  const primary=$('hero-primary-action');
+  primary.href=state.canVote?'#explore':state.id==='published'?'#results-section':'#batch-rail';
+  primary.replaceChildren(document.createTextNode(state.canVote?'学習データを探す ':state.id==='published'?'学習結果を見る ':'処理状況を確認 '));
+  const symbol=document.createElement('span');symbol.setAttribute('aria-hidden','true');symbol.textContent='↗';primary.append(symbol);
+  $('batch-description').textContent=state.description;
+  for(const [id,value] of [
+    ['batch-voter-count',voteSummary?.voter_count],
+    ['batch-pick-count',voteSummary?.vote_count],
+    ['batch-forecast-count',voteSummary?.forecast_count],
+  ]){
+    $(id).textContent=Number.isInteger(value)?value.toLocaleString('ja-JP'):'—';
+  }
+  const due=Number(current?.closes_at);
+  $('batch-fixed-deadline').textContent=Number.isFinite(due)&&due>0?
+    `投票の締切：${new Date(due*1000).toLocaleString('ja-JP',{month:'numeric',day:'numeric',hour:'2-digit',minute:'2-digit'})}`:
+    '投票の締切：未定';
+  const order=['vote','lock','train','publish'];
+  const selected={voting:0,'awaiting-lock':1,locked:1,training:2,published:3}[state.id]??-1;
+  document.querySelectorAll('[data-batch-step]').forEach((element,index)=>{
+    element.dataset.state=index===selected?'current':index<selected?'complete':'upcoming';
+    element.setAttribute('aria-current',index===selected?'step':'false');
+  });
+}
 function syncControls(){
   const statusNow=deadline();
   const editable=statusNow.isOpen;
@@ -84,10 +112,11 @@ function syncControls(){
   phase.textContent=current?(current.status==='OPEN'&&!editable?'締切時刻を過ぎました。集計処理を待っています。':
     (phases[current.status]||`現在の状態：${current.status}。推薦は変更できません。`)):'モデル未初期化：推薦はまだできません。';
   phase.dataset.phase=editable?'open':'closed';
-  syncForecastControls();updateGameProgress();
+  renderBatchState();syncForecastControls();updateGameProgress();
 }
 function renderModel(info){
   current=info.round;
+  voteSummary=info.vote_summary||null;
   if(Number.isFinite(info.server_time))serverClockOffsetMs=info.server_time*1000-Date.now();
   const mode=info.mode;datasetName=info.dataset_name||null;
   $('mode-badge').className='mode-tag '+(mode==='LIVE'?'is-live':'is-warning');
@@ -298,6 +327,7 @@ setInterval(()=>{
   if(!current)return;
   const editable=deadline().isOpen;
   $('round-countdown').textContent=deadline().label;
+  renderBatchState();
   if(editable!==lastEditable){
     lastEditable=editable;syncControls();drawPicks();refreshSamples();
     if(!editable)status('投票締切になりました。次のラウンドの結果をお待ちください。','info');
