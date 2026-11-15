@@ -11,7 +11,9 @@ def app(tmp_path,monkeypatch):
     db=GameStore(tmp_path/'game.sqlite3');db.initialize()
     db.bootstrap_samples([(i,i%10) for i in range(200)],'fixture')
     db.open_round('r1','cp0',(3,5),21)
-    return make_app(db, tmp_path)
+    application=make_app(db,tmp_path)
+    application.state.test_store=db
+    return application
 
 
 def test_two_browsers_vote_server_side_and_lock(app):
@@ -27,7 +29,9 @@ def test_two_browsers_vote_server_side_and_lock(app):
         assert response.json()['total']==200
         assert not response.json()['items'][0].get('image_url')
         assert alice.post('/v1/admin/rounds/r1/lock').status_code==403
-        assert alice.post('/v1/admin/rounds/r1/lock',headers={'X-Admin-Key':'test-key-'*5}).status_code==200
+        assert alice.post('/v1/admin/rounds/r1/lock',headers={'X-Admin-Key':'test-key-'*5}).status_code==409
+        # Internal test fixture advances to its closed phase without changing the public API.
+        app.state.test_store.lock_round('r1')
         assert alice.put('/v1/rounds/r1/picks/15').status_code==409
 
 
@@ -74,3 +78,26 @@ def test_shared_design_module_is_served_without_exposing_internal_files(app):
         assert client.get('/app.js').status_code==200
         assert client.get('/src/../../backend/store.py').status_code in (404, 422)
         assert client.get('/src/store.py').status_code==404
+
+
+def test_live_page_serves_every_required_browser_module_and_stylesheet(app):
+    """The actual served HTML must resolve every import and stylesheet.
+
+    Inline-script browser tests cannot catch broken external module routes.
+    """
+    from pathlib import Path
+    import re
+    with TestClient(app) as client:
+        html=client.get('/').text
+        assert '<script type="module" src="live.js">' in html
+        for stylesheet in re.findall(r'<link rel="stylesheet" href="([^"]+)">',html):
+            res=client.get('/'+stylesheet)
+            assert res.status_code==200, f'stylesheet unavailable: {stylesheet}: {res.status_code}'
+            assert 'text/css' in res.headers.get('content-type','')
+        entry=client.get('/live.js').text
+        imports=re.findall(r"^import .*? from ['\"]([^'\"]+)['\"]",entry,re.M)
+        assert imports
+        for script in imports:
+            res=client.get('/'+script.removeprefix('./'))
+            assert res.status_code==200, f'import unavailable: {script}: {res.status_code}'
+            assert 'javascript' in res.headers.get('content-type','')

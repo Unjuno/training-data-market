@@ -28,7 +28,8 @@ def test_procedural_demo_full_round(tmp_path, monkeypatch):
         assert 'image/png' in client.get(samples['items'][0]['image_url']).headers['content-type']
         first=samples['items'][0]['id']
         assert client.put(f'/v1/rounds/round-0001/picks/{first}').status_code==200
-        assert client.post('/v1/admin/rounds/round-0001/lock',headers={'X-Admin-Key':'k'*40}).status_code==200
+        assert client.post('/v1/admin/rounds/round-0001/lock',headers={'X-Admin-Key':'k'*40}).status_code==409
+        db.lock_round('round-0001')
         result=ml.run_locked_round(tmp_path,tmp_path,'round-0001')
         assert result['community_steps']==result['random_steps']==40
         assert client.get('/v1/rounds/current').json()['round']['id']=='round-0002'

@@ -44,15 +44,16 @@ def test_round_snapshot_is_persistent(tmp_path,store):
 def test_finalize_opens_next_round_and_freezes_consumed_images(store):
     store.set_pick('r1','participant',4)
     store.lock_round('r1')
+    token=store.claim_round('r1')
     store.finalize_round('r1',result_json='{"winner":"community"}',
                          next_round_id='r2',next_checkpoint='cp1',
-                         next_targets=(1,9),next_seed=124,consumed_ids=[4,15])
+                         next_targets=(1,9),next_seed=124,consumed_ids=[4,15],claim_token=token)
     assert store.get_round('r1')['status']=='PUBLISHED'
     assert store.get_round('r2')['status']=='OPEN'
     assert 4 not in store.get_classes() and 15 not in store.get_classes()
     assert store.get_counts('r1')[4]==1
     with pytest.raises(GameError):
-        store.finalize_round('r1','{}','r2','cp1',(1,9),124,[])
+        store.finalize_round('r1','{}','r2','cp1',(1,9),124,[],claim_token=token)
     with pytest.raises(GameError):store.set_pick('r2','participant',4)
 
 

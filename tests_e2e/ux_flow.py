@@ -17,7 +17,7 @@ def markup():
 
 def js_bundle():
     parts=[]
-    for name in ['src/arena-view.js','src/deadline.js','live.js']:
+    for name in ['src/arena-view.js','src/deadline.js','src/round-flow.js','src/game-view.js','live.js']:
         content=(ROOT/name).read_text()
         content=re.sub(r'(?m)^import .*?;\s*$','',content)
         content=re.sub(r'(?m)^export\s+(?=(const|function|class)\b)','',content)
@@ -25,13 +25,13 @@ def js_bundle():
     return '\n'.join(parts)
 
 MOCK='''() => {
- window.__mock={picks:[],failVote:false,failSamples:false,requests:[],
+ window.__mock={picks:[],failVote:false,failSamples:false,status:'OPEN',requests:[],
   samples:Array.from({length:50},(_,i)=>({id:101+i,label:i%10,prediction:{predicted:i%2?i%10:(i+1)%10,loss:1.3-i/100},votes:0,image_url:null}))};
  const res=(status,data)=>({ok:status<400,status,json:async()=>data});
  window.fetch=async(input,opts={})=>{
   const url=String(input),method=opts.method||'GET',s=window.__mock;
   s.requests.push(method+' '+url);
-  if(url==='/v1/rounds/current')return res(200,{mode:'LIVE',server_time:Date.now()/1000,round:{id:'r1',status:'OPEN',targets:[3,5],closes_at:s.deadlineSeconds||Date.now()/1000+3600},metrics:{public:{overall_loss:0.8,accuracy:0.61}}});
+  if(url==='/v1/rounds/current')return res(200,{mode:'LIVE',server_time:Date.now()/1000,round:{id:'r1',status:s.status,targets:[3,5],closes_at:s.deadlineSeconds||Date.now()/1000+3600},vote_summary:{vote_count:24,voter_count:8,forecast_count:3,frozen:s.status!=='OPEN'},metrics:{public:{overall_loss:0.8,accuracy:0.61}}});
   if(url.endsWith('/picks/me'))return res(200,{ids:[...s.picks],note:''});
   if(url.startsWith('/v1/samples?')){
    if(s.failSamples)return res(503,{error:'モデルの予測結果を準備中です'});
@@ -121,7 +121,18 @@ async def main():
         assert await mobile.locator('#page-caption').get_attribute('aria-live')=='polite','result count not announced to assistive technology'
         overflow=await mobile.evaluate('document.documentElement.scrollWidth>window.innerWidth')
         assert not overflow,'horizontal overflow'
+        # The shared time-gated process has four explicit phases and real counts.
+        assert '投票受付中' in await mobile.locator('#batch-stage').inner_text()
+        assert await mobile.locator('#batch-voter-count').inner_text()=='8'
+        assert await mobile.locator('#batch-pick-count').inner_text()=='24'
+        assert await mobile.locator('#batch-forecast-count').inner_text()=='3'
+        await mobile.evaluate("window.__mock.status='TRAINING'")
+        await mobile.locator('#refresh').click()
+        await mobile.wait_for_function("document.querySelector('#batch-stage').textContent==='バッチ学習中'")
+        assert await mobile.locator('#batch-rail').get_attribute('data-stage')=='training'
+        assert not await mobile.locator('#sample-id').is_enabled()
         # The deadline UI must disable votes without waiting for the worker.
+        await mobile.evaluate("window.__mock.status='OPEN'")
         await mobile.evaluate('window.__mock.deadlineSeconds=Date.now()/1000-1')
         await mobile.locator('#refresh').click()
         await mobile.wait_for_function('document.querySelector("#sample-id").disabled===true')

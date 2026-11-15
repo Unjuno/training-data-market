@@ -30,6 +30,10 @@
 - 実装計画: [v1.1実装計画](docs/plans/2026-11-15-game-v1.1.md)
 - ブラウザ検証: `PYTHONPATH=. python tests_e2e/game_smoke.py --port 8765 --state demo-state`（別端末でローカル実学習デモ起動後。Chromium144、about:blank経由の通信ブリッジによるテスト）
 
+## 時間制バッチ v1.2
+
+1ラウンドは **投票受付 → 締切確定 → 単一ワーカーによるバッチ学習 → 結果発表 → 次ラウンド**。クリックで学習は開始しません。`/v1/rounds/current` が個人情報を含まない投票集計値と締切時刻を返します。複数ワーカーの重複実行を claim token で防止し、クラッシュ後は旧プロセス停止確認のうえ手動復旧します。詳しくは [時間制バッチ v1.2](docs/timed-batch-v1.2.md) を参照。
+
 ## 重要：Sitesと学習ワーカーは別
 
 ChatGPT Sitesには`@Sites`でサイトを作成できますが、PyTorch学習がSitesのランタイムで実行できるとは前提にしません。`live.html`と`live.js`をUI基盤とし、Sites内の認証・永続DBまたは認証済みの外部APIへ接続します。Python学習ワーカーは別ホストが必要です。具体的な引き継ぎは[SITES_PROMPT.md](SITES_PROMPT.md)と[docs/sites-handoff.md](docs/sites-handoff.md)を参照。

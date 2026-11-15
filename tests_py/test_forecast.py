@@ -54,7 +54,8 @@ def test_personal_history_scores_immutable_round_and_ignores_missing_votes(store
     store.set_forecast('r1', 'alice', 75)
     store.set_forecast('r1', 'bob', 25)
     store.lock_round('r1')
-    store.publish_result('r1', json.dumps(result()))
+    token=store.claim_round('r1')
+    store.finalize_round('r1',json.dumps(result()),'r2','cp0',(3,5),9,[],claim_token=token)
     history = store.player_history('alice')
     assert history['total_points'] == 94
     assert history['scored_rounds'] == 1
@@ -81,11 +82,10 @@ def test_cumulative_points_include_all_rounds_not_just_recent_history(store):
     # 23 scored rounds, but the history preview defaults to only the latest 20.
     for n in range(1,24):
         round_id=f'r{n}'
-        if n>1:
-            store.open_round(round_id,'cp0',(3,5),8)
         store.set_forecast(round_id,'alice',50)
         store.lock_round(round_id)
-        store.publish_result(round_id,json.dumps(result()))
+        token=store.claim_round(round_id)
+        store.finalize_round(round_id,json.dumps(result()),f'r{n+1}','cp0',(3,5),8,[],claim_token=token)
     value=store.player_history('alice')
     assert len(value['items'])==20
     assert value['scored_rounds']==23

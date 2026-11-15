@@ -224,10 +224,14 @@ def prepare_demo(state_root:Path,seed:int=20261115):
     return {'dataset':'SYNTHETIC_PIXEL_ART','target_pair':target,
             'initial_optimizer_steps':steps,'public_loss':public['overall_loss']}
 
-def run_locked_round(data_root:Path,state_root:Path, round_id:str):
+def run_locked_round(data_root:Path,state_root:Path, round_id:str, claim_token:str|None=None):
     store=GameStore(state_root/'votes.sqlite3')
+    if claim_token is None:
+        claim_token=store.claim_round(round_id)
+        if claim_token is None:raise GameError('round is already claimed or cannot be trained',409)
     round_data=store.get_round(round_id)
-    if round_data['status']!='LOCKED':raise GameError('round must be LOCKED',409)
+    if round_data['status']!='TRAINING' or round_data['worker_token']!=claim_token:
+        raise GameError('round claim token is stale or mismatched',409)
     if not round_id.startswith('round-') or not round_id[6:].isdigit():
         raise GameError('invalid round identifier',422)
     seed=int(round_data['seed']);seed_all(seed)
@@ -296,7 +300,8 @@ def run_locked_round(data_root:Path,state_root:Path, round_id:str):
     # recoverable by replaying the locked experiment with the same seed.
     store.finalize_round(round_id,json.dumps(public_result,ensure_ascii=False,allow_nan=False),
                          next_round_id=next_round,next_checkpoint=new_cp,
-                         next_targets=new_weakness,next_seed=seed+1,consumed_ids=consumed)
+                         next_targets=new_weakness,next_seed=seed+1,consumed_ids=consumed,
+                         claim_token=claim_token)
     atomic_json(state_root/'results'/f'{round_id}.json',public_result)
     return public_result
 

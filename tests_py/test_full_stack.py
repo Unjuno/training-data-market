@@ -55,7 +55,8 @@ def test_vote_to_train_and_new_round(tmp_path, monkeypatch):
         assert alice.put('/v1/rounds/round-0001/note',json={'text':'この画像が役立つ'}).status_code==200
         assert alice.get('/v1/rounds/round-0001/picks/me').json()['note']=='この画像が役立つ'
         assert alice.post('/v1/admin/rounds/round-0001/lock').status_code==403
-        assert alice.post('/v1/admin/rounds/round-0001/lock',headers={'X-Admin-Key':'super-secret-'*4}).status_code==200
+        assert alice.post('/v1/admin/rounds/round-0001/lock',headers={'X-Admin-Key':'super-secret-'*4}).status_code==409
+        db.lock_round('round-0001')
         assert bob.put('/v1/rounds/round-0001/picks/1').status_code==409
         out=ml.run_locked_round(Path('/synthetic-fixture'),tmp_path,'round-0001')
         assert out['community_steps']==out['random_steps']==40

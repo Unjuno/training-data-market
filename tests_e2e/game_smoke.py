@@ -41,7 +41,7 @@ def test_flow(port:int,state:Path,out:Path):
     content=(ROOT/'live.html').read_text(encoding='utf8').replace('<script type="module" src="live.js"></script>','')
     content=content.replace('</head>','<base href="https://tdm.test/"></head>')
     sources=[]
-    for f in ['src/arena-view.js','src/deadline.js','src/game-view.js','live.js']:
+    for f in ['src/arena-view.js','src/deadline.js','src/round-flow.js','src/game-view.js','live.js']:
         src=(ROOT/f).read_text(encoding='utf-8')
         src=re.sub(r'(?m)^import .*?;\s*$', '', src)
         src=re.sub(r'(?m)^export\s+', '', src)
@@ -82,7 +82,9 @@ def test_flow(port:int,state:Path,out:Path):
         page.wait_for_function('document.getElementById("forecast-last-result").textContent.includes("pt")',timeout=30000)
         print('SCORE VISIBLE',page.locator('#forecast-last-result').inner_text(),flush=True)
         assert current in page.locator('#forecast-last-result').inner_text()
-        assert 'Community と Random' in page.locator('#results').inner_text()
+        result_text=page.locator('#results').inner_text()
+        assert 'Community' in result_text and 'Random' in result_text
+        assert '共有AIへの反映' in result_text
         assert page.locator('#forecast-score-total').inner_text()!='0 pt'
         page.locator('#results-section').screenshot(path=str(out/'results.png'))
         assert errors==[],errors
