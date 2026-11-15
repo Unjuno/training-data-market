@@ -19,6 +19,14 @@ export function updatePickMeter(count){
   $('my-count').textContent=`${count} / 10`;
   $('mobile-pick-count').textContent=`${count} / 10`;
   $('pick-meter-fill').style.width=`${Math.max(0,Math.min(count,10))*10}%`;
+  // First-time visitors must be guided to the gallery, not an empty ballot.
+  const shortcut=document.querySelector('.mobile-vote-link');
+  if(shortcut){
+    shortcut.href=count>0?'#vote-panel':'#explore';
+    if(shortcut.firstChild?.nodeType===3){
+      shortcut.firstChild.textContent=count>0?'推薦リストを確認 ':'画像を探す ';
+    }
+  }
 }
 export function createSampleCard({id,label,prediction=null,votes=0,image_url=null,image_kind='CIFAR-10',selected=false,disabled=false,onToggle,demo=false}){
   const card=document.createElement('article');card.className='sample-card'+(selected?' is-selected':'');
@@ -44,7 +52,7 @@ export function createSampleCard({id,label,prediction=null,votes=0,image_url=nul
   element(body,'h3',CLASS_NAMES[label]||'不明','sample-label');
   element(body,'p',validPrediction?`AIの予測：${CLASS_NAMES[prediction.predicted]}`:'AIの予測：未計測','sample-pred');
   const bottom=element(body,'div','','sample-bottom');
-  const loss=element(bottom,'span','', 'sample-loss');element(loss,'small','SAMPLE LOSS');
+  const loss=element(bottom,'span','', 'sample-loss');element(loss,'small','予測の損失 / LOSS');
   element(loss,'span',Number.isFinite(prediction?.loss)?prediction.loss.toFixed(3):'—');
   element(bottom,'span',`${votes} 票`,'sample-votes');
   const btn=element(body,'button',selected?'✓ 推薦済み・解除する':'+ この画像を推薦する','select-button');

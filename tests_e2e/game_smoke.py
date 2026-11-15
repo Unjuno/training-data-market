@@ -53,7 +53,7 @@ def test_flow(port:int,state:Path,out:Path):
         page.route('https://tdm.test/**',lambda r:serve_asset(r,api_root))
         page.expose_function('__bridgeRequest',bridge(api_root))
         page.set_content(content,wait_until='domcontentloaded')
-        for css in ['styles.css','live.css','game.css']:
+        for css in ['styles.css','live.css','game.css','experience.css']:
             page.add_style_tag(content=(ROOT/css).read_text(encoding='utf8'))
         page.evaluate('''() => {window.fetch=async(url,opts={})=>{
             const r=await window.__bridgeRequest(url,opts.method||'GET',opts.body||null);
@@ -94,7 +94,7 @@ def test_flow(port:int,state:Path,out:Path):
         mobile.route('https://tdm.test/**',lambda r:serve_asset(r,api_root))
         mobile.expose_function('__bridgeRequest',bridge(api_root))
         mobile.set_content(content,wait_until='domcontentloaded')
-        for css in ['styles.css','live.css','game.css']:
+        for css in ['styles.css','live.css','game.css','experience.css']:
             mobile.add_style_tag(content=(ROOT/css).read_text(encoding='utf8'))
         mobile.evaluate('''() => {window.fetch=async(url,opts={})=>{
             const r=await window.__bridgeRequest(url,opts.method||'GET',opts.body||null);

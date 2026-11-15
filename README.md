@@ -4,6 +4,11 @@
 
 **実装状態：ローカルAPI・投票・PyTorch学習コアを実装し、合成データでテスト済み。CIFAR-10本体は同梱しておらず、実データでの測定・Sites公開は未実施です。** 学習済みだと偽る表示をしていません。
 
+## Visual experience v1.4
+
+`experience.css` introduces a game-first visual system: compact challenge hero, cream-colored data gallery, readable pastel sample cards, and clearer mobile metrics. It is loaded by the live API and exported by the static build. The UI is not proof of model quality or user satisfaction. [Design and visual QA notes](docs/visual-experience-v1.4.md).
+
+
 ## UX品質の改善（v0.7）
 
 - 画像検索の300ms自動更新、各画面幅に応じた小さなページサイズ、一覧末尾からのページ移動。

@@ -82,3 +82,6 @@ Sitesランタイムの仕様と接続可能なDB/サーバー機能を確認し
 - `GET /v1/rounds/{round_id}/participation/me` をログイン済みセッションと結びつけてください。本人以外の採用履歴を公開しないでください。
 - 採用数は `voted_ids` との交差だけで数え、Communityバッチのランダム補完や予測ポイントと混同しないでください。
 - Sitesデプロイ後、実ブラウザで時間制投票、学習結果、個人レポートを受入試験してください。未接続の部分は未接続と明示してください。
+
+
+**Visual design contract (v1.4):** Keep `experience.css` in the final artifact along with `styles.css`, `live.css`, and `game.css`. Preserve the light data-gallery / dark ballot contrast, pastel category cards, responsive 2-column gallery, accessible focus, and dynamically changing mobile shortcut. Follow `docs/visual-experience-v1.4.md`. Do not replace these elements with a generic one-column landing page or mock learning stats.

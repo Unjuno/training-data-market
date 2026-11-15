@@ -16,7 +16,7 @@ async def main():
   markup=(root/'index.html').read_text()
   markup=re.sub(r'<link rel="stylesheet" href="[^"]+">', '', markup)
   markup=re.sub(r'<script type="module" src="[^"]+"></script>', '', markup)
-  markup=markup.replace('</head>', '<style>'+(root/'styles.css').read_text()+(root/'live.css').read_text()+'</style></head>')
+  markup=markup.replace('</head>', '<style>'+(root/'styles.css').read_text()+(root/'live.css').read_text()+(root/'experience.css').read_text()+'</style></head>')
   js='\n'.join(remove_modules((root/file).read_text()) for file in ['src/demo-data.js','src/selection.js','src/draft.js','src/arena-view.js','app.js'])
   async with async_playwright() as p:
     browser=await p.chromium.launch(executable_path='/usr/bin/chromium',headless=True,args=['--no-sandbox'])

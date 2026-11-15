@@ -10,7 +10,7 @@ def markup():
     html=(ROOT/'live.html').read_text()
     html=re.sub(r'<link rel="stylesheet" href="[^"]+">','',html)
     html=re.sub(r'<script type="module" src="[^"]+"></script>','',html)
-    css=(ROOT/'styles.css').read_text()+'\n'+(ROOT/'live.css').read_text()+'\n'+(ROOT/'game.css').read_text()
+    css=(ROOT/'styles.css').read_text()+'\n'+(ROOT/'live.css').read_text()+'\n'+(ROOT/'game.css').read_text()+'\n'+(ROOT/'experience.css').read_text()
     return html.replace('</head>','<style>'+css+'</style></head>')
 
 
