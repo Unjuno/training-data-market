@@ -77,21 +77,41 @@ export function renderResults(data){
     element(panel,'h3','学習結果を待っています');element(panel,'p','ラウンド終了後に、同じ初期モデルから学習した二つのモデルの実測値を表示します。');return;
   }
   const box=element(node,'div','','result-data');
-  element(box,'div',`${data.round_id} / ${data.target_pair.map(i=>CLASS_NAMES[i]).join(' × ')}`,'result-kicker');
-  element(box,'h3','Community と Random の実測比較');
-  const table=element(box,'table','','result-table');
-  const head=element(table,'thead','');const headRow=element(head,'tr','');
-  for(const h of ['指標','学習前','投票モデル','ランダム'])element(headRow,'th',h);
-  const body=element(table,'tbody','');
-  for(const row of [
-    ['対象ペアのLoss',data.before.target_loss,data.community.target_loss,data.random.target_loss],
-    ['改善量',null,data.before.target_loss-data.community.target_loss,data.before.target_loss-data.random.target_loss]
-  ]){
-    const tr=element(body,'tr','');row.forEach((v,i)=>element(tr,'td',i===0?v:v===null?'—':Number(v).toFixed(4)));
+  const pair=Array.isArray(data.target_pair)?data.target_pair.map(i=>CLASS_NAMES[i]||'?').join(' × '):'評価対象';
+  element(box,'div',`${data.round_id} / ${pair}`,'result-kicker');
+  const verdict=data.forecast_verdict?.outcome;
+  const headline=verdict==='community'?'Communityが勝利':verdict==='random'?'Randomが勝利':
+    verdict==='tie'?'今回は引き分け':'今回は予測の採点対象外';
+  const overview=element(box,'div','','result-overview');
+  element(overview,'div','ROUND VERDICT','result-overline');
+  element(overview,'h3',headline);
+  element(overview,'p','対象2クラスの検証Lossが小さい方を勝者とします。個々の画像の効果を断定する結果ではありません。');
+  const losses=[['Community',data.community?.target_loss],['Random',data.random?.target_loss]];
+  const grid=element(box,'div','','result-scorecards');
+  for(const [label,loss] of losses){
+    const winner=(verdict==='community'&&label==='Community')||(verdict==='random'&&label==='Random');
+    const card=element(grid,'div','',`result-scorecard${winner?' is-winner':''}`);
+    element(card,'span',label.toUpperCase(),'result-card-label');
+    element(card,'strong',Number.isFinite(loss)?Number(loss).toFixed(4):'—');
+    element(card,'small',winner?'WINNER / LOWEST LOSS':'TARGET CROSS-ENTROPY');
   }
-  const verdict=element(box,'div','','result-verdict');element(verdict,'span','共有AIへの反映');
-  element(verdict,'strong',data.promotion==='community'?'投票モデルを採用':data.promotion==='random'?'ランダムモデルを採用':'更新せず（ロールバック）');
-  element(box,'p',`投票由来 ${data.voted_count} 枚 / 合計 128 枚・各アーム 40 更新ステップ`,'result-meta');
+  const beforeLoss=data.before?.target_loss;
+  const comLoss=data.community?.target_loss;
+  const rndLoss=data.random?.target_loss;
+  const asNumber=n=>Number.isFinite(n)?n.toFixed(4):'—';
+  const comparison=element(box,'div','','result-experiment');
+  element(comparison,'strong','対照実験の結果');
+  const list=element(comparison,'dl','');
+  for(const [title,value] of [
+    ['学習前のLoss',asNumber(beforeLoss)],
+    ['Communityの改善量',asNumber(beforeLoss-comLoss)],
+    ['Randomの改善量',asNumber(beforeLoss-rndLoss)]]){
+    const row=element(list,'div','','result-experiment-row');
+    element(row,'dt',title);element(row,'dd',value);
+  }
+  const verdictBox=element(box,'div','','result-verdict');element(verdictBox,'span','共有AIへの反映（勝敗とは別判定）');
+  element(verdictBox,'strong',data.promotion==='community'?'投票モデルを採用':data.promotion==='random'?'ランダムモデルを採用':'更新せず（ロールバック）');
+  element(box,'p',`投票由来 ${data.voted_count??'—'} 枚 / 合計 128 枚・各アーム 40 更新ステップ`,'result-meta');
 }
 
 /** Floating mobile shortcut is shown only after the hero is out of view. */

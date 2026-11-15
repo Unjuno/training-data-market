@@ -1,7 +1,7 @@
 {
   "name": "training-data-market",
   "private": true,
-  "version": "0.9.0",
+  "version": "1.1.0",
   "description": "Training Data Market — UX-refined research-cockpit UI, reproducible PyTorch worker, and ChatGPT Sites handoff",
   "type": "module",
   "scripts": {
@@ -9,7 +9,7 @@
     "build": "node scripts/build.mjs",
     "preview": "node scripts/serve.mjs",
     "test": "node --test tests/*.test.js",
-    "check": "node --check live.js && node --check app.js && node --check src/arena-view.js && node --check scripts/build.mjs && node --check scripts/serve.mjs && npm test"
+    "check": "node --check live.js && node --check app.js && node --check src/arena-view.js && node --check src/game-view.js && node --check scripts/build.mjs && node --check scripts/serve.mjs && npm test"
   },
   "engines": {"node": ">=22"},
   "license": "MIT"

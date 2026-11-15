@@ -8,6 +8,7 @@
   <title>Training Data Market | AIを育てる、データの市場</title>
   <link rel="stylesheet" href="styles.css">
   <link rel="stylesheet" href="live.css">
+  <link rel="stylesheet" href="game.css">
   <script type="module" src="live.js"></script>
 </head>
 <body class="arena" data-mode="live">
@@ -21,11 +22,12 @@
       </a>
       <nav class="top-nav" aria-label="メインナビゲーション">
         <a href="#explore" class="nav-link current">データを探す</a>
+        <a href="#prediction-section" class="nav-link">勝敗を予想</a>
         <a href="#results-section" class="nav-link">学習結果</a>
         <a href="#how-it-works" class="nav-link">しくみ</a>
       </nav>
       <div class="header-actions">
-        <span class="version-label">EXPERIMENTAL / V0.6</span>
+        <span class="version-label">BETA / V1.1</span>
         <span class="mode-tag" id="mode-badge"><span class="status-led" aria-hidden="true"></span> 接続確認中</span>
       </div>
     </header>
@@ -48,6 +50,11 @@
             <div class="target-emblem target-right"><span class="target-icon" id="quest-visual-b">?</span><small id="quest-name-b">UNKNOWN</small></div>
           </div>
           <div class="quest-caption"><span class="quest-prefix">MISSION OBJECTIVE</span><h2 id="target-pair">弱点を解析中</h2><p>この2クラスの識別性能を、追加学習で改善できるか。</p></div>
+          <div class="quest-intel" id="quest-intel" aria-label="現在の弱点クラス別正解率（Recall）">
+            <div><small>CLASS A RECALL</small><strong id="quest-recall-a">—</strong></div>
+            <span class="quest-intel-mid">/ PUBLIC VALIDATION</span>
+            <div><small>CLASS B RECALL</small><strong id="quest-recall-b">—</strong></div>
+          </div>
           <div class="quest-steps" aria-label="実験の進行段階"><span class="step-current">01 <b>観察</b></span><span>02 <b>推薦</b></span><span>03 <b>学習</b></span><span>04 <b>検証</b></span></div>
         </div>
       </section>
@@ -62,6 +69,15 @@
         </div>
       </section>
 
+      <section class="game-guide" aria-label="このラウンドの進め方">
+        <div class="game-guide-copy"><span class="guide-label">YOUR NEXT MOVE</span><strong id="player-next-step">画像を1枚選ぶ</strong><p>推薦と勝敗予測は別々に保存されます。どちらも締切まで編集できます。</p></div>
+        <div class="game-guide-steps" aria-label="プレイ進捗">
+          <span class="guide-step is-ready" id="progress-watch"><i>01</i> 観察</span>
+          <span class="guide-step" id="progress-scout"><i>02</i> 推薦</span>
+          <span class="guide-step" id="progress-forecast"><i>03</i> 予測</span>
+          <span class="guide-step" id="progress-reveal"><i>04</i> 結果</span>
+        </div>
+      </section>
       <div class="alert-wrap"><p id="app-alert" class="app-alert" data-level="info" role="status" aria-live="polite"><span class="alert-indicator" aria-hidden="true"></span><span class="alert-label">SYSTEM MESSAGE</span><span id="app-alert-text">学習状態を取得しています。</span></p></div>
       <p id="service-fallback" class="service-fallback" hidden>共有学習APIは未接続です。<a href="demo.html">まず操作デモを試す（模擬データ・学習なし）</a></p>
 
@@ -76,6 +92,15 @@
             <button class="filter-submit" type="submit">絞り込む <span aria-hidden="true">↗</span></button>
           </form>
           <p class="explorer-help">ヒント：誤分類やLossの大きさは判断材料です。高いLossの画像が必ず学習に有効とは限りません。</p>
+          <div class="strategy-picker" role="group" aria-label="学習データを探すヒント">
+            <div class="strategy-picker-label"><span class="strategy-decor">✦</span><div><strong>どの戦略で探す？</strong><small>クラス別・誤分類から候補を絞れます</small></div></div>
+            <div class="strategy-actions">
+              <button type="button" id="strategy-a" data-strategy="a" class="strategy-btn">弱点Aの画像</button>
+              <button type="button" id="strategy-b" data-strategy="b" class="strategy-btn">弱点Bの画像</button>
+              <button type="button" id="strategy-wrong" data-strategy="wrong" class="strategy-btn">誤分類を探す</button>
+              <button type="button" id="strategy-all" data-strategy="all" class="strategy-btn">全件を探す</button>
+            </div>
+          </div>
           <div class="explorer-tools"><div><span class="view-indicator" aria-hidden="true">▦</span><span id="page-caption" role="status" aria-live="polite" tabindex="-1">データを読み込んでいます</span></div><div class="paging"><button type="button" id="prev-page" class="page-btn" aria-label="前のページ">← 前へ</button><button type="button" id="next-page" class="page-btn" aria-label="次のページ">次へ →</button></div></div>
           <p id="dataset-rights" class="rights-banner"><span aria-hidden="true">ⓘ</span> 画像の公開許可がない場合は代替表示になります。Loss等は実測が取得できた場合のみ表示します。</p>
           <div id="sample-grid" class="sample-grid" aria-live="polite"></div>
@@ -102,17 +127,33 @@
           <p class="note-state" id="note-state" role="status" aria-live="polite">メモは「保存」を押すまで反映されません。</p>
           <button type="button" id="save-reason" class="vote-main-button">推薦理由のメモを保存 <span aria-hidden="true">↗</span></button>
           <p id="vote-status" class="vote-status" role="status" aria-live="polite" tabindex="-1"></p>
-          <button type="button" id="refresh" class="refresh-button">↻ 最新の状態に更新</button>
+          <section class="prediction-zone" id="prediction-section" aria-labelledby="prediction-title">
+            <div class="prediction-eyebrow"><span>03</span> / THE FORECAST</div>
+            <div class="prediction-heading"><div><h3 id="prediction-title">あなたは、<em>どう読む？</em></h3><p>みんなが選んだデータは、ランダム学習に勝てる？</p></div><span aria-hidden="true" class="prediction-emblem">↗</span></div>
+            <div class="forecast-facts"><span>勝利条件：Communityの対象LossがRandomより低い</span><span>同じ初期モデル／128枚／40更新</span></div>
+            <form id="forecast-form" class="forecast-form">
+              <label for="forecast-range">Communityが勝つ予測確率</label>
+              <div class="forecast-numeric"><output for="forecast-range" id="forecast-pct">60%</output><span>CHANCE OF WINNING</span></div>
+              <input id="forecast-range" name="probability_pct" type="range" min="5" max="95" value="60" step="5" aria-describedby="forecast-hint">
+              <div class="forecast-scale" aria-hidden="true"><span>5% — 不利</span><span>五分五分</span><span>95% — 有利</span></div>
+              <p id="forecast-hint" class="forecast-hint">勝つと思う度合いを数値にしてみよう。</p>
+              <button id="forecast-save" type="submit" class="forecast-save">この予測を保存する <span aria-hidden="true">↗</span></button>
+              <p id="forecast-status" class="forecast-status" role="status" aria-live="polite">まだ予測を提出していません。</p>
+            </form>
+            <div class="forecast-score"><span class="forecast-score-label">YOUR TRACK RECORD <small>このブラウザの記録</small></span><strong id="forecast-score-total">—</strong><p id="forecast-score-summary">過去の予測結果を読み込み中</p><p id="forecast-last-result"></p></div>
+            <p class="forecast-disclaimer">無料の予測ゲームです。ポイントに換金・譲渡機能はありません。投票なし・同点・評価不能のラウンドは採点しません。</p>
+          </section>
+                    <button type="button" id="refresh" class="refresh-button">↻ 最新の状態に更新</button>
           <div class="ballot-legal"><strong>EXPERIMENT RULE</strong><p>上位の推薦最大64枚とランダム補完で128枚を構成。同条件のランダム対照と比較します。クリックした瞬間には学習しません。</p><p>匿名ブラウザセッションは本人確認ではありません。</p></div>
         </aside>
       </div>
 
       <section class="results-section" id="results-section" aria-labelledby="results-title">
-        <div class="section-head result-head"><div><div class="section-overline"><span>03</span> / LEARNING RESULTS</div><h2 id="results-title">その一票は、<em>効いたのか。</em></h2><p>実際の学習結果を、同じ出発点のランダム学習と比較します。</p></div><span class="result-mark" aria-hidden="true">↗</span></div>
+        <div class="section-head result-head"><div><div class="section-overline"><span>03</span> / LEARNING RESULTS</div><h2 id="results-title">今回の選択は、<em>どうだった？</em></h2><p>実際の学習結果を、同じ出発点のランダム学習と比較します。</p></div><span class="result-mark" aria-hidden="true">↗</span></div>
         <div id="results" class="results-surface" aria-live="polite"><div class="results-pending"><span class="pending-symbol" aria-hidden="true">◌</span><h3>学習結果を待っています</h3><p>ラウンドが完了したら、ここに実測Lossとモデルの採用判定を表示します。</p></div></div>
       </section>
 
-      <section class="how-it-works" id="how-it-works" aria-labelledby="how-title"><div class="how-heading"><p class="section-overline">THE MECHANISM / 04</p><h2 id="how-title">あなたの選択が、<br>学習の方向をつくる。</h2></div><div class="how-grid"><div class="how-item"><span>01 — OBSERVE</span><strong>弱点を見る</strong><p>公開された損失や誤分類を観察。</p></div><div class="how-item"><span>02 — SELECT</span><strong>データを選ぶ</strong><p>理由のある推薦を10枚まで登録。</p></div><div class="how-item"><span>03 — TRAIN</span><strong>実際に学習</strong><p>集計した画像で共有AIを更新。</p></div><div class="how-item"><span>04 — VERIFY</span><strong>実験で確かめる</strong><p>ランダム選択との性能差を公開。</p></div></div></section>
+      <section class="how-it-works" id="how-it-works" aria-labelledby="how-title"><div class="how-heading"><p class="section-overline">THE MECHANISM / 04</p><h2 id="how-title">あなたの選択が、<br>学習の方向をつくる。</h2></div><div class="how-grid"><div class="how-item"><span>01 — OBSERVE</span><strong>弱点を見る</strong><p>公開された損失や誤分類を観察。</p></div><div class="how-item"><span>02 — SELECT</span><strong>データを選ぶ</strong><p>理由のある推薦を10枚まで登録。</p></div><div class="how-item"><span>03 — FORECAST</span><strong>勝敗を予測する</strong><p>集計後の実験結果がランダムを上回るか予測。</p></div><div class="how-item"><span>04 — REVEAL</span><strong>実験で確かめる</strong><p>ランダム選択との性能差を公開。</p></div></div></section>
     </main>
     <footer class="site-footer"><div><strong>DATA<span>/</span>MARKET</strong><p>Collectively shaping intelligence.</p></div><div><a href="https://github.com/Unjuno/training-data-market" target="_blank" rel="noopener noreferrer">GITHUB ↗</a><a href="demo.html">DEMO MODE ↗</a></div><small>RESEARCH PROTOTYPE · 実学習・権利状態を確認してから公開してください。</small></footer>
   </div>
