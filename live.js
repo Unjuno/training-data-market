@@ -1,10 +1,10 @@
 import {CLASS_NAMES,CLASS_KEYS,$,renderPicks,setSystemMessage,createSampleCard,updateQuest,setMetric,renderResults,setupMobileVoteLink} from './src/arena-view.js';
 import {deadlineState} from './src/deadline.js';
 import {batchPhase} from './src/round-flow.js';
-import {questIntel,progressState,scoreSummary,forecastHint} from './src/game-view.js';
+import {questIntel,progressState,scoreSummary,forecastHint,nextAction,participationMessage,isCurrentRoundRevealed,promotionMessage} from './src/game-view.js';
 let current=null;let datasetName=null;let picks=new Set();let page=1,total=0;let busy=false;let requestVersion=0;
 let searchDebounce=null;let noteDirty=false;let serverClockOffsetMs=0;let lastEditable=false;let autoRefreshing=false;
-let forecastPct=null;let forecastDirty=false;let forecastBusy=false;let lastPublished=false;let voteSummary=null;
+let forecastPct=null;let forecastDirty=false;let forecastBusy=false;let lastPublished=false;let publishedRoundId=null;let voteSummary=null;
 for(let i=0;i<CLASS_NAMES.length;i++){
   const option=document.createElement('option');option.value=String(i);option.textContent=CLASS_NAMES[i];$('label-filter').append(option);
 }
@@ -20,8 +20,13 @@ async function request(url,options={}){
 function updateGameProgress(){
   const state=progressState(picks.size,forecastPct!==null,deadline().isOpen);
   $('player-next-step').textContent=state.next;
+  const action=nextAction({count:picks.size,hasForecast:forecastPct!==null,
+    canVote:deadline().isOpen,hasResults:lastPublished});
+  $('next-step-action').href=action.href;
+  $('next-step-action').firstChild.textContent=action.label+' ';
+  $('next-step-description').textContent=action.description;
   for(const [id,done] of [['progress-watch',!!current],['progress-scout',state.selected],
-                           ['progress-forecast',state.forecasted],['progress-reveal',lastPublished]]){
+                           ['progress-forecast',state.forecasted],['progress-reveal',isCurrentRoundRevealed(current,publishedRoundId)]]){
     const step=$(id);step.classList.toggle('is-done',done);
     step.classList.toggle('is-ready',!done && id===(state.selected?'progress-forecast':'progress-scout'));
   }
@@ -237,14 +242,41 @@ async function vote(id,add=true){
     return false;
   }finally{busy=false;}
 }
+function showParticipation(personal,promotion){
+  const panel=$('personal-participation');
+  panel.hidden=!personal;
+  if(!personal)return;
+  const count=personal.adopted_count;
+  $('personal-adoption').textContent=Number.isInteger(count)?
+    `投票枠から ${count} 枚を採用`:'あなたの推薦結果';
+  $('personal-adoption-detail').textContent=(participationMessage(personal)||'')+
+    ' '+promotionMessage(promotion)+' 個々の画像が精度を改善したという証明ではありません。';
+}
 async function refreshResults(){
   try{
     const history=await request('/v1/rounds/history');
     const published=history.items.find(item=>item.status==='PUBLISHED');
-    if(!published){lastPublished=false;renderResults(null);updateGameProgress();return;}
+    if(!published){
+      lastPublished=false;publishedRoundId=null;renderResults(null);showParticipation(null);
+      $('result-context').textContent='まだ結果が公開されたラウンドはありません。';
+      updateGameProgress();return;
+    }
     const result=await request(`/v1/rounds/${encodeURIComponent(published.id)}/results`);
-    lastPublished=Boolean(result.results);renderResults(result.results||null);updateGameProgress();
-  }catch(error){$('results').textContent='結果の取得に失敗しました：'+error.message;}
+    lastPublished=Boolean(result.results);
+    publishedRoundId=lastPublished?published.id:null;
+    renderResults(result.results||null);
+    $('result-context').textContent=`${published.id} の確定結果です。現在のラウンド ${current?.id||'—'} とは別です。`;
+    // The public result remains visible even if the personal endpoint fails.
+    try{
+      const personal=await request(`/v1/rounds/${encodeURIComponent(published.id)}/participation/me`);
+      showParticipation(lastPublished?personal:null,result.results?.promotion);
+    }catch(error){
+      const panel=$('personal-participation');panel.hidden=false;
+      $('personal-adoption').textContent='推薦結果を取得できませんでした';
+      $('personal-adoption-detail').textContent='実験結果は表示できています。本人の採用枚数は「最新の状態に更新」で再取得してください。';
+    }
+    updateGameProgress();
+  }catch(error){$('results').textContent='結果の取得に失敗しました：'+error.message;showParticipation(null);}
 }
 async function refreshAll(){
   const info=await request('/v1/rounds/current');

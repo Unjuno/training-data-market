@@ -88,3 +88,21 @@
 @media(max-width:370px){.batch-timeline{grid-template-columns:repeat(2,1fr)}}
 
 @media(max-width:620px){.batch-timeline li{flex-direction:column;gap:3px;min-height:52px;padding:8px 3px;font-size:.75rem;line-height:1.2}.batch-timeline li span{font-size:.63rem}}
+
+/* Personal agency without falsely attributing causality to a single image. */
+.guide-action{display:inline-flex;align-items:center;justify-content:space-between;gap:18px;
+  background:#cdf3a5;color:#15271e;border:1px solid #e2ffc5;border-radius:9px;
+  padding:10px 15px;min-height:46px;margin-top:12px;font-weight:800;font-size:.83rem;text-decoration:none;}
+.guide-action:hover{background:#e4ffca;transform:translateY(-1px)}
+.guide-action:focus-visible{outline:3px solid #fff;outline-offset:3px}
+.personal-participation:not([hidden]){display:flex;align-items:center;justify-content:space-between;gap:24px;
+  margin-top:15px;padding:21px 24px;border:1px solid #50785a;border-radius:13px;
+  background:linear-gradient(105deg,#1f3d2c,#11251f);color:#ebf9e6;}
+.personal-participation small{display:block;color:#b6d79d;font:700 .65rem var(--font-code,monospace);letter-spacing:.07em}
+.personal-participation strong{display:block;font-size:1.3rem;line-height:1.4;margin:8px 0 3px}
+.personal-participation p{font-size:.78rem;color:#c8dcc9;line-height:1.7;margin:0;max-width:75ch}
+.personal-mark{color:#caefaa;font-size:2rem}
+@media(max-width:620px){.guide-action{width:100%;}.personal-participation:not([hidden]){padding:17px;}
+ .personal-participation small{font-size:.68rem}.personal-participation strong{font-size:1.1rem}
+ .personal-mark{display:none;}}
+@media(prefers-reduced-motion:reduce){.guide-action:hover{transform:none}}

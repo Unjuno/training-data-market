@@ -288,6 +288,7 @@ def run_locked_round(data_root:Path,state_root:Path, round_id:str, claim_token:s
                 'samples':candidate_predictions(selected_model,data,remaining)})
     public_result={'status':'PUBLISHED','round_id':round_id,'target_pair':targets,
                    'has_votes':chosen['has_votes'],'voted_count':len(chosen['voted']),
+                   'voted_ids':chosen['voted'],
                    'selected_ids':chosen['community'],'control_ids':chosen['random'],
                    'community_steps':arm_results['community']['optimizer_steps'],
                    'random_steps':arm_results['random']['optimizer_steps'],

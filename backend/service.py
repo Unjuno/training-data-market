@@ -247,6 +247,25 @@ def make_app(store:GameStore,state_root:Path):
         published=json.loads(obj['result_json'])
         return {'status':'PUBLISHED','results':{**published,'forecast_verdict':judge_round(published)}}
 
+    @app.get('/v1/rounds/{round_id}/participation/me')
+    def my_participation(round_id:str,response:Response,request:Request):
+        """Personal feedback: voted-slot adoption, not causal training contribution."""
+        user=issue_session(request,response)
+        round_data=store.get_round(round_id)
+        recommended=store.get_picks(round_id,user)
+        adopted_ids=None
+        if round_data['status']=='PUBLISHED' and round_data['result_json']:
+            result=json.loads(round_data['result_json'])
+            # Old experiments lack vote provenance. Never infer it from the
+            # full Community batch: its random-fill portion is not vote-selected.
+            if isinstance(result.get('voted_ids'),list):
+                voted={int(i) for i in result['voted_ids']}
+                adopted_ids=sorted(set(recommended).intersection(voted))
+        return {'round_id':round_id,'status':round_data['status'],
+                'recommended_ids':recommended,'recommended_count':len(recommended),
+                'adopted_ids':adopted_ids,
+                'adopted_count':len(adopted_ids) if adopted_ids is not None else None}
+
     @app.post('/v1/admin/rounds/{round_id}/lock')
     def lock_round(round_id:str,request:Request):
         require_admin(request)

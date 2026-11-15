@@ -61,6 +61,10 @@ def test_vote_to_train_and_new_round(tmp_path, monkeypatch):
         out=ml.run_locked_round(Path('/synthetic-fixture'),tmp_path,'round-0001')
         assert out['community_steps']==out['random_steps']==40
         assert out['voted_count']==1
+        assert out['voted_ids']==[0]
+        personal=alice.get('/v1/rounds/round-0001/participation/me').json()
+        assert personal['adopted_ids']==[0]
+        assert personal['recommended_count']==personal['adopted_count']==1
         assert out['next_round']=='round-0002'
         assert out['promotion'] in ('community','random','rollback')
         assert db.get_round('round-0001')['status']=='PUBLISHED'

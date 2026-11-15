@@ -70,7 +70,7 @@
       </section>
 
       <section class="game-guide" aria-label="このラウンドの進め方">
-        <div class="game-guide-copy"><span class="guide-label">YOUR NEXT MOVE</span><strong id="player-next-step">画像を1枚選ぶ</strong><p>推薦と勝敗予測は別々に保存されます。どちらも締切まで編集できます。</p></div>
+        <div class="game-guide-copy"><span class="guide-label">YOUR NEXT MOVE</span><strong id="player-next-step">画像を1枚選ぶ</strong><p id="next-step-description">まず画像を1枚推薦してみましょう。</p><a class="guide-action" id="next-step-action" href="#explore">画像を選ぶ <span aria-hidden="true">↗</span></a></div>
         <div class="game-guide-steps" aria-label="プレイ進捗">
           <span class="guide-step is-ready" id="progress-watch"><i>01</i> 観察</span>
           <span class="guide-step" id="progress-scout"><i>02</i> 推薦</span>
@@ -170,8 +170,12 @@
       </div>
 
       <section class="results-section" id="results-section" aria-labelledby="results-title">
-        <div class="section-head result-head"><div><div class="section-overline"><span>03</span> / LEARNING RESULTS</div><h2 id="results-title">今回の選択は、<em>どうだった？</em></h2><p>実際の学習結果を、同じ出発点のランダム学習と比較します。</p></div><span class="result-mark" aria-hidden="true">↗</span></div>
+        <div class="section-head result-head"><div><div class="section-overline"><span>03</span> / LEARNING RESULTS</div><h2 id="results-title">直近の実験は、<em>どうだった？</em></h2><p id="result-context">最新の公開済みラウンドの結果を表示します。</p></div><span class="result-mark" aria-hidden="true">↗</span></div>
         <div id="results" class="results-surface" aria-live="polite"><div class="results-pending"><span class="pending-symbol" aria-hidden="true">◌</span><h3>学習結果を待っています</h3><p>ラウンドが完了したら、ここに実測Lossとモデルの採用判定を表示します。</p></div></div>
+        <section class="personal-participation" id="personal-participation" aria-label="あなたの前回の推薦結果" hidden>
+          <div><small>YOUR RECOMMENDATION RECAP · 本人だけに表示</small><strong id="personal-adoption">採用結果を確認中</strong><p id="personal-adoption-detail"></p></div>
+          <span class="personal-mark" aria-hidden="true">✳</span>
+        </section>
       </section>
 
       <section class="how-it-works" id="how-it-works" aria-labelledby="how-title"><div class="how-heading"><p class="section-overline">THE MECHANISM / 04</p><h2 id="how-title">あなたの選択が、<br>学習の方向をつくる。</h2></div><div class="how-grid"><div class="how-item"><span>01 — OBSERVE</span><strong>弱点を見る</strong><p>公開された損失や誤分類を観察。</p></div><div class="how-item"><span>02 — SELECT</span><strong>データを選ぶ</strong><p>理由のある推薦を10枚まで登録。</p></div><div class="how-item"><span>03 — FORECAST</span><strong>勝敗を予測する</strong><p>集計後の実験結果がランダムを上回るか予測。</p></div><div class="how-item"><span>04 — REVEAL</span><strong>実験で確かめる</strong><p>ランダム選択との性能差を公開。</p></div></div></section>
