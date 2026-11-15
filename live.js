@@ -1,7 +1,9 @@
 import {CLASS_NAMES,CLASS_KEYS,$,renderPicks,setSystemMessage,createSampleCard,updateQuest,setMetric,renderResults,setupMobileVoteLink} from './src/arena-view.js';
 import {deadlineState} from './src/deadline.js';
+import {questIntel,progressState,scoreSummary,forecastHint} from './src/game-view.js';
 let current=null;let datasetName=null;let picks=new Set();let page=1,total=0;let busy=false;let requestVersion=0;
 let searchDebounce=null;let noteDirty=false;let serverClockOffsetMs=0;let lastEditable=false;let autoRefreshing=false;
+let forecastPct=null;let forecastDirty=false;let forecastBusy=false;let lastPublished=false;
 for(let i=0;i<CLASS_NAMES.length;i++){
   const option=document.createElement('option');option.value=String(i);option.textContent=CLASS_NAMES[i];$('label-filter').append(option);
 }
@@ -13,6 +15,61 @@ async function request(url,options={}){
   let data;try{data=await response.json();}catch{throw Error(`サーバーの応答形式に問題があります（HTTP ${response.status}）`);}
   if(!response.ok)throw Error(typeof(data.error||data.detail)==='string'?(data.error||data.detail):`HTTP ${response.status}`);
   return data;
+}
+function updateGameProgress(){
+  const state=progressState(picks.size,forecastPct!==null,deadline().isOpen);
+  $('player-next-step').textContent=state.next;
+  for(const [id,done] of [['progress-watch',!!current],['progress-scout',state.selected],
+                           ['progress-forecast',state.forecasted],['progress-reveal',lastPublished]]){
+    const step=$(id);step.classList.toggle('is-done',done);
+    step.classList.toggle('is-ready',!done && id===(state.selected?'progress-forecast':'progress-scout'));
+  }
+}
+function syncForecastControls(){
+  const enabled=deadline().isOpen;
+  $('forecast-range').disabled=!enabled;
+  $('forecast-save').disabled=!enabled||forecastBusy;
+  if(!enabled&&current) $('forecast-status').textContent='締切済み：予測は変更できません。結果公開後に採点します。';
+}
+function renderForecastRecord(record){
+  $('forecast-score-total').textContent=`${Number(record.total_points||0).toLocaleString('ja-JP')} pt`;
+  $('forecast-score-summary').textContent=scoreSummary(record);
+  const completed=(record.items||[]).find(item=>item.points!==null);
+  $('forecast-last-result').textContent=completed?
+    `${completed.round_id}：予測 ${completed.forecast_pct}% / ${completed.outcome==='community'?'Community勝利':'Random勝利'} → +${completed.points} pt`:
+    '予測の採点結果はラウンド終了後に表示されます。';
+}
+async function refreshForecast(){
+  if(!current){forecastPct=null;updateGameProgress();syncForecastControls();return;}
+  try{
+    const [state,record]=await Promise.all([
+      request(`/v1/rounds/${encodeURIComponent(current.id)}/forecast/me`),
+      request('/v1/game/me')]);
+    forecastPct=state.probability_pct;
+    if(!forecastDirty){
+      $('forecast-range').value=String(forecastPct??60);
+      $('forecast-pct').textContent=`${$('forecast-range').value}%`;
+      $('forecast-hint').textContent=forecastHint(Number($('forecast-range').value));
+      $('forecast-status').textContent=forecastPct!==null?
+        `予測 ${forecastPct}% はサーバーに保存されています。締切まで更新可能です。`:
+        'まだ予測を提出していません。';
+    }
+    $('forecast-save').firstChild.textContent=forecastPct!==null?'保存した予測を更新する ':'この予測を保存する ';
+    renderForecastRecord(record);
+  }catch(error){
+    $('forecast-status').textContent='予測情報を取得できません：'+error.message+'。後でもう一度読み込んでください。';
+    $('forecast-status').dataset.level='error';
+  }
+  syncForecastControls();updateGameProgress();
+}
+function applyStrategy(kind){
+  if(!current)return;
+  const [a,b]=current.targets;
+  const labels={'a':a,'b':b};
+  $('query').value='';$('label-filter').value=kind in labels?String(labels[kind]):'';
+  $('wrong-only-live').checked=kind==='wrong';
+  for(const button of document.querySelectorAll('[data-strategy]'))button.setAttribute('aria-pressed',String(button.dataset.strategy===kind));
+  clearTimeout(searchDebounce);page=1;refreshSamples();
 }
 function syncControls(){
   const statusNow=deadline();
@@ -27,6 +84,7 @@ function syncControls(){
   phase.textContent=current?(current.status==='OPEN'&&!editable?'締切時刻を過ぎました。集計処理を待っています。':
     (phases[current.status]||`現在の状態：${current.status}。推薦は変更できません。`)):'モデル未初期化：推薦はまだできません。';
   phase.dataset.phase=editable?'open':'closed';
+  syncForecastControls();updateGameProgress();
 }
 function renderModel(info){
   current=info.round;
@@ -40,6 +98,11 @@ function renderModel(info){
   const metrics=info.metrics?.public;
   setMetric(metrics?.overall_loss,'metric-loss',n=>n.toFixed(3));
   setMetric(metrics?.accuracy,'metric-accuracy',n=>(100*n).toFixed(1)+'%');
+  const intel=questIntel(metrics,current?.targets);
+  $('quest-recall-a').textContent=intel[0]?`${intel[0].label} ${intel[0].recall}`:'—';
+  $('quest-recall-b').textContent=intel[1]?`${intel[1].label} ${intel[1].recall}`:'—';
+  $('strategy-a').textContent=intel[0]?`${intel[0].label}の画像`:'弱点Aの画像';
+  $('strategy-b').textContent=intel[1]?`${intel[1].label}の画像`:'弱点Bの画像';
   syncControls();
   if(!current)setSystemMessage('初期モデルと学習データがまだ登録されていません。サーバー管理者による初期化が必要です。','warning');
   else if(!metrics)setSystemMessage('検証結果が未計測です。推測値を代わりに表示することはありません。','warning');
@@ -55,6 +118,7 @@ async function refreshPicks(){
 }
 function drawPicks(){
   renderPicks([...picks].sort((a,b)=>a-b),{disabled:!deadline().isOpen,onRemove:id=>vote(id,false)});
+  updateGameProgress();
 }
 function queryValue(){
   const q=$('query').value.trim();const ix=CLASS_NAMES.indexOf(q);return ix>=0?CLASS_KEYS[ix]:q;
@@ -148,21 +212,52 @@ async function refreshResults(){
   try{
     const history=await request('/v1/rounds/history');
     const published=history.items.find(item=>item.status==='PUBLISHED');
-    if(!published){renderResults(null);return;}
+    if(!published){lastPublished=false;renderResults(null);updateGameProgress();return;}
     const result=await request(`/v1/rounds/${encodeURIComponent(published.id)}/results`);
-    renderResults(result.results||null);
+    lastPublished=Boolean(result.results);renderResults(result.results||null);updateGameProgress();
   }catch(error){$('results').textContent='結果の取得に失敗しました：'+error.message;}
 }
 async function refreshAll(){
   const info=await request('/v1/rounds/current');
   const prior=current?.id;renderModel(info);
   $('service-fallback').hidden=true;
-  if(prior!==current?.id)page=1;
+  if(prior!==current?.id){page=1;forecastPct=null;forecastDirty=false;}
   // Refresh remote picks even when the round didn't change (other tabs or devices).
   await refreshPicks();
-  await Promise.all([refreshSamples(),refreshResults()]);
+  await Promise.all([refreshSamples(),refreshResults(),refreshForecast()]);
 }
 function searchNow(){clearTimeout(searchDebounce);page=1;refreshSamples();}
+for(const btn of document.querySelectorAll('[data-strategy]')){
+  btn.setAttribute('aria-pressed','false');
+  btn.addEventListener('click',()=>applyStrategy(btn.dataset.strategy));
+}
+$('forecast-range').addEventListener('input',()=>{
+  forecastDirty=true;
+  const percent=Number($('forecast-range').value);
+  $('forecast-pct').textContent=`${percent}%`;
+  $('forecast-hint').textContent=forecastHint(percent);
+  $('forecast-status').textContent='まだ保存されていません。「予測を保存」を押すと確定します。';
+  $('forecast-status').dataset.level='info';
+});
+$('forecast-form').addEventListener('submit',async event=>{
+  event.preventDefault();
+  if(!current||!deadline().isOpen||forecastBusy)return;
+  forecastBusy=true;syncForecastControls();
+  const percent=Number($('forecast-range').value);
+  $('forecast-status').textContent=`${percent}% の予測をサーバーへ保存中…`;
+  try{
+    await request(`/v1/rounds/${encodeURIComponent(current.id)}/forecast/me`,{
+      method:'PUT',headers:{'Content-Type':'application/json'},body:JSON.stringify({probability_pct:percent})});
+    forecastPct=percent;forecastDirty=false;
+    $('forecast-status').dataset.level='success';
+    $('forecast-status').textContent=`${percent}% で予測を保存しました。締切前なら変更できます。`;
+    updateGameProgress();
+    const rec=await request('/v1/game/me');renderForecastRecord(rec);
+  }catch(error){
+    $('forecast-status').dataset.level='error';
+    $('forecast-status').textContent='予測を保存できませんでした：'+error.message+'。入力値は残っています。';
+  }finally{forecastBusy=false;syncForecastControls();}
+});
 $('filters').addEventListener('submit',e=>{e.preventDefault();searchNow();});
 $('query').addEventListener('input',()=>{clearTimeout(searchDebounce);searchDebounce=setTimeout(searchNow,300);});
 $('label-filter').addEventListener('change',searchNow);

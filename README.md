@@ -12,6 +12,24 @@
 - [UX品質仕様と未実施の人間テスト](docs/ux-quality-v0.7.md)。
 - オプションのChromium実ブラウザ操作テスト: `python tests_e2e/ux_flow.py`（PlaywrightとChromiumが必要）。
 
+
+## v1.1: Scout & Forecast — プレイ可能なゲームループ
+
+- **観察**：共有モデルの公開検証Loss・クラス別Recall・現在の弱点ペアを確認します。評価値を予測値と混同しません。
+- **推薦**：候補画像から最大10枚を選択。現在のクエストの2クラス、誤分類、全画像へのショートカットがあります。
+- **予測**：CommunityがRandomより対象2クラスの検証Lossを下げる確率を5～95%（5%刻み）で提出。締切前なら編集可能です。
+- **結果発表**：両モデルの実測値と勝敗、共有モデルへの採用・ロールバックを別々に表示します。プレイヤーの予測を0～100ポイントで採点し、このブラウザの履歴に記録します。
+
+予測の採点は **`100 × [1 − (予測確率−結果)^2]` を整数丸め**（確率は0～1、Community勝利を1）。50%の予測は正解・不正解とも75ポイントです。投票ゼロ、同点（対象Loss差0.001以内）、無効測定は採点しません。ポイントはゲーム内の非換金値で、モデルの学習データ選択に影響しません。
+
+`PUT /v1/rounds/{round_id}/forecast/me` は `{ "probability_pct": 75 }` のようなJSONを受け付けます。`GET /v1/rounds/{round_id}/forecast/me` は本人の保存済み予測、`GET /v1/game/me` は本人の累計予測スコアを返します。いずれも同一オリジンの署名付きブラウザセッションを使用し、本番認証ではありません。
+
+スコアはグループの予測結果に対するものです。**個別画像・個人の選択が結果改善を引き起こしたという因果的な貢献度ではありません。**
+
+- ゲーム設計: [v1.1のルールと判断基準](docs/design/2026-11-15-game-loop.md)
+- 実装計画: [v1.1実装計画](docs/plans/2026-11-15-game-v1.1.md)
+- ブラウザ検証: `PYTHONPATH=. python tests_e2e/game_smoke.py --port 8765 --state demo-state`（別端末でローカル実学習デモ起動後。Chromium144、about:blank経由の通信ブリッジによるテスト）
+
 ## 重要：Sitesと学習ワーカーは別
 
 ChatGPT Sitesには`@Sites`でサイトを作成できますが、PyTorch学習がSitesのランタイムで実行できるとは前提にしません。`live.html`と`live.js`をUI基盤とし、Sites内の認証・永続DBまたは認証済みの外部APIへ接続します。Python学習ワーカーは別ホストが必要です。具体的な引き継ぎは[SITES_PROMPT.md](SITES_PROMPT.md)と[docs/sites-handoff.md](docs/sites-handoff.md)を参照。

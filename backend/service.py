@@ -15,7 +15,7 @@ import time
 from threading import Lock
 from pathlib import Path
 from fastapi import FastAPI, Query, Request, Response
-from pydantic import BaseModel, Field
+from pydantic import BaseModel, Field, StrictInt
 from fastapi.responses import FileResponse, StreamingResponse
 from fastapi.staticfiles import StaticFiles
 from starlette.middleware.base import BaseHTTPMiddleware
@@ -37,6 +37,9 @@ def _round_artifact(root:Path,folder:str,round_data:dict):
 
 class NoteInput(BaseModel):
     text: str = Field(max_length=400)
+
+class ForecastInput(BaseModel):
+    probability_pct: StrictInt = Field(ge=5, le=95)
 
 def make_app(store:GameStore,state_root:Path):
     state_root=Path(state_root)
@@ -203,6 +206,25 @@ def make_app(store:GameStore,state_root:Path):
         user=issue_session(request,response)
         return {'deleted':store.delete_pick(round_id,user,sample_id)}
 
+    @app.get('/v1/rounds/{round_id}/forecast/me')
+    def my_forecast(round_id:str,response:Response,request:Request):
+        user=issue_session(request,response)
+        forecast=store.get_forecast(round_id,user)
+        row=store.get_round(round_id)
+        return {'probability_pct':forecast,
+                'editable':row['status']=='OPEN' and row['closes_at'] is not None and time.time()<row['closes_at']}
+
+    @app.put('/v1/rounds/{round_id}/forecast/me')
+    def save_forecast(round_id:str,payload:ForecastInput,response:Response,request:Request):
+        user=issue_session(request,response)
+        return {'status':store.set_forecast(round_id,user,payload.probability_pct),
+                'probability_pct':payload.probability_pct}
+
+    @app.get('/v1/game/me')
+    def my_game_record(response:Response,request:Request):
+        user=issue_session(request,response)
+        return store.player_history(user)
+
     @app.get('/v1/rounds/history')
     def history():
         return {'items':[{'id':r['id'],'status':r['status'],
@@ -220,7 +242,9 @@ def make_app(store:GameStore,state_root:Path):
     def results(round_id:str):
         obj=store.get_round(round_id)
         if obj['status']!='PUBLISHED':return {'status':obj['status'],'results':None}
-        return {'status':'PUBLISHED','results':json.loads(obj['result_json'])}
+        from backend.forecast import judge_round
+        published=json.loads(obj['result_json'])
+        return {'status':'PUBLISHED','results':{**published,'forecast_verdict':judge_round(published)}}
 
     @app.post('/v1/admin/rounds/{round_id}/lock')
     def lock_round(round_id:str,request:Request):

@@ -54,6 +54,12 @@ class GameStore:
                   round_id TEXT NOT NULL REFERENCES rounds(id), user_id TEXT NOT NULL,
                   content TEXT NOT NULL CHECK(length(content)<=400),
                   PRIMARY KEY(round_id,user_id));
+                CREATE TABLE IF NOT EXISTS forecasts (
+                  round_id TEXT NOT NULL REFERENCES rounds(id),
+                  user_id TEXT NOT NULL,
+                  probability_pct INTEGER NOT NULL CHECK(probability_pct BETWEEN 5 AND 95 AND probability_pct % 5=0),
+                  updated_at REAL NOT NULL,
+                  PRIMARY KEY(round_id,user_id));
                 CREATE TABLE IF NOT EXISTS events (
                   id INTEGER PRIMARY KEY AUTOINCREMENT, round_id TEXT,
                   kind TEXT NOT NULL, details TEXT NOT NULL, at REAL NOT NULL);
@@ -164,6 +170,45 @@ class GameStore:
             r=conn.execute('SELECT content FROM recommendation_notes WHERE round_id=? AND user_id=?',
                            (round_id,user_id)).fetchone()
             return r['content'] if r else ''
+
+    def set_forecast(self,round_id:str,user_id:str,probability_pct:int)->str:
+        if type(probability_pct) is not int or not (5<=probability_pct<=95 and probability_pct%5==0):
+            raise GameError('probability must be 5..95 in steps of 5',422)
+        with self._db(True) as conn:
+            self._check_open(conn,round_id)
+            existing=conn.execute('SELECT probability_pct FROM forecasts WHERE round_id=? AND user_id=?',
+                                  (round_id,user_id)).fetchone()
+            conn.execute('INSERT INTO forecasts(round_id,user_id,probability_pct,updated_at) VALUES(?,?,?,?) '
+                         'ON CONFLICT(round_id,user_id) DO UPDATE SET probability_pct=excluded.probability_pct, '
+                         'updated_at=excluded.updated_at',
+                         (round_id,user_id,probability_pct,time.time()))
+            return 'updated' if existing else 'created'
+
+    def get_forecast(self,round_id:str,user_id:str)->int|None:
+        with self._db() as conn:
+            if not conn.execute('SELECT 1 FROM rounds WHERE id=?',(round_id,)).fetchone():
+                raise GameError('round not found',404)
+            row=conn.execute('SELECT probability_pct FROM forecasts WHERE round_id=? AND user_id=?',
+                             (round_id,user_id)).fetchone()
+            return int(row['probability_pct']) if row else None
+
+    def player_history(self,user_id:str,limit:int=20)->dict:
+        import json
+        from backend.forecast import judge_round,forecast_points
+        with self._db() as conn:
+            rows=conn.execute('SELECT f.round_id,f.probability_pct,r.status,r.result_json '
+                              'FROM forecasts f JOIN rounds r ON r.id=f.round_id '
+                              'WHERE f.user_id=? ORDER BY r.opened_at DESC,r.id DESC',
+                              (user_id,)).fetchall()
+        history=[];scored_rounds=0;total_points=0
+        for row in rows:
+            judge=judge_round(json.loads(row['result_json'])) if row['status']=='PUBLISHED' and row['result_json'] else {'outcome':'pending'}
+            points=forecast_points(int(row['probability_pct']),judge['outcome'])
+            if points is not None:
+                total_points+=points;scored_rounds+=1
+            history.append({'round_id':row['round_id'],'forecast_pct':int(row['probability_pct']),
+                            'outcome':judge['outcome'],'points':points,'reason':judge.get('reason')})
+        return {'total_points':total_points,'scored_rounds':scored_rounds,'submitted_rounds':len(history),'items':history[:limit]}
 
     def get_sample(self,sample_id:int):
         with self._db() as conn:
